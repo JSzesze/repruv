@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#171614" />
+    <meta name="theme-color" content="#090909" />
     <meta name="description" content="Turn a public webpage or X post into clean Markdown." />
     <meta property="og:title" content="Repruv — URL to Markdown" />
     <meta property="og:description" content="Paste a public URL. Get clean Markdown." />
@@ -22,21 +22,24 @@
   <body>
     <a class="skip-link" href="#url">Skip to URL input</a>
 
-    <div class="dotted-glow" aria-hidden="true">
-      <canvas id="dotted-glow-canvas"></canvas>
-    </div>
+    <header class="topbar">
+      <a class="wordmark" href="/" aria-label="Repruv home">
+        <span class="brand-mark" aria-hidden="true"></span>
+        REPRUV
+      </a>
+      <span class="utility-name">URL → MARKDOWN</span>
+    </header>
 
-    <div class="page">
-      <header>
-        <a class="wordmark" href="/" aria-label="Repruv home">repruv<span aria-hidden="true">/</span></a>
-      </header>
+    <main>
+      <section class="input-stage" aria-labelledby="input-title">
+        <div class="stage-axis stage-axis-horizontal" aria-hidden="true"></div>
+        <div class="stage-axis stage-axis-vertical" aria-hidden="true"></div>
+        <div class="dotted-glow" aria-hidden="true">
+          <canvas id="dotted-glow-canvas"></canvas>
+        </div>
 
-      <main>
-        <section class="intro" aria-labelledby="page-title">
-          <p class="eyebrow">URL to Markdown</p>
-          <h1 id="page-title">Paste a link.</h1>
-          <p class="lede">Get clean Markdown from a public webpage or X post.</p>
-
+        <div class="input-module">
+          <h1 id="input-title">Convert a public URL</h1>
           <form id="extract-form">
             <div class="input-group">
               <input
@@ -54,37 +57,37 @@
               />
               <button class="convert-button" type="submit">
                 <span class="button-label">Convert</span>
-                <span class="button-arrow" aria-hidden="true">→</span>
+                <kbd aria-hidden="true">↵</kbd>
               </button>
             </div>
             <div class="form-foot">
-              <p id="privacy">Public URLs only. Results are cached.</p>
-              <button id="example" class="example-button" type="button">Try example</button>
+              <p id="privacy">Public URLs only · cached</p>
+              <p class="form-state"><span aria-hidden="true"></span><span id="form-state">Ready</span></p>
             </div>
             <div class="progress" aria-hidden="true"><span></span></div>
           </form>
-        </section>
+        </div>
+      </section>
 
-        <section id="result" class="result" hidden aria-live="polite" aria-busy="false">
-          <div class="result-heading">
-            <div>
-              <p id="meta" class="meta"></p>
-              <h2 id="title"></h2>
-            </div>
-            <div class="actions">
-              <button id="copy" type="button">Copy</button>
-              <button id="download" type="button">Download</button>
-            </div>
+      <section id="result" class="result" hidden aria-live="polite" aria-busy="false">
+        <div class="result-heading">
+          <div>
+            <p id="meta" class="meta"></p>
+            <h2 id="title"></h2>
           </div>
-          <div id="output-panel" class="output-panel" tabindex="0">
-            <pre><code id="output"></code></pre>
+          <div class="actions">
+            <button id="copy" type="button">Copy</button>
+            <button id="download" type="button">Download</button>
           </div>
-        </section>
+        </div>
+        <div id="output-panel" class="output-panel" tabindex="0">
+          <pre><code id="output"></code></pre>
+        </div>
+      </section>
 
-        <section id="error" class="error" hidden aria-live="assertive">
-          <p id="error-message"></p>
-        </section>
-      </main>
-    </div>
+      <section id="error" class="error" hidden aria-live="assertive">
+        <p id="error-message"></p>
+      </section>
+    </main>
   </body>
 </html>

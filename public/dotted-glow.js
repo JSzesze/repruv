@@ -4,16 +4,17 @@
  */
 (() => {
   const canvas = document.querySelector("#dotted-glow-canvas");
+  const container = canvas?.parentElement;
   const context = canvas?.getContext("2d");
-  if (!canvas || !context) return;
+  if (!canvas || !container || !context) return;
 
-  const gap = 18;
-  const radius = 1.15;
-  const opacity = 0.46;
-  const speedMin = 0.22;
-  const speedMax = 0.62;
-  const dotColor = "rgba(180, 179, 174, 0.62)";
-  const glowColor = "rgba(204, 135, 78, 0.62)";
+  const gap = 15;
+  const radius = 0.95;
+  const opacity = 0.42;
+  const speedMin = 0.18;
+  const speedMax = 0.48;
+  const dotColor = "rgba(158, 158, 153, 0.54)";
+  const glowColor = "rgba(239, 111, 46, 0.62)";
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
   let width = 0;
@@ -21,6 +22,7 @@
   let dots = [];
   let frame = 0;
   let running = false;
+  let visible = true;
 
   function buildDots() {
     dots = [];
@@ -40,9 +42,10 @@
   }
 
   function resize() {
+    const bounds = container.getBoundingClientRect();
     const pixelRatio = Math.min(Math.max(window.devicePixelRatio || 1, 1), 2);
-    width = window.innerWidth;
-    height = window.innerHeight;
+    width = Math.max(1, Math.floor(bounds.width));
+    height = Math.max(1, Math.floor(bounds.height));
     canvas.width = Math.max(1, Math.floor(width * pixelRatio));
     canvas.height = Math.max(1, Math.floor(height * pixelRatio));
     canvas.style.width = `${width}px`;
@@ -61,12 +64,12 @@
     for (const dot of dots) {
       const mod = (time * dot.speed + dot.phase) % 2;
       const wave = mod < 1 ? mod : 2 - mod;
-      const alpha = 0.2 + 0.54 * wave;
+      const alpha = 0.18 + 0.5 * wave;
 
-      if (alpha > 0.6) {
-        const glow = (alpha - 0.6) / 0.4;
+      if (alpha > 0.58) {
+        const glow = (alpha - 0.58) / 0.42;
         context.shadowColor = glowColor;
-        context.shadowBlur = 5 * glow;
+        context.shadowBlur = 4 * glow;
       } else {
         context.shadowColor = "transparent";
         context.shadowBlur = 0;
@@ -79,17 +82,25 @@
     }
 
     context.restore();
-    if (continueAnimation && running) frame = requestAnimationFrame(draw);
+    if (continueAnimation && running && visible) frame = requestAnimationFrame(draw);
   }
 
   function updateAnimation() {
     cancelAnimationFrame(frame);
     running = !reducedMotion.matches && !document.hidden;
-    if (running) frame = requestAnimationFrame(draw);
+    if (running && visible) frame = requestAnimationFrame(draw);
     else draw(performance.now(), false);
   }
 
-  window.addEventListener("resize", resize, { passive: true });
+  const resizeObserver = new ResizeObserver(resize);
+  resizeObserver.observe(container);
+
+  const visibilityObserver = new IntersectionObserver(([entry]) => {
+    visible = entry?.isIntersecting ?? true;
+    updateAnimation();
+  }, { threshold: 0.05 });
+  visibilityObserver.observe(container);
+
   document.addEventListener("visibilitychange", updateAnimation);
   reducedMotion.addEventListener?.("change", updateAnimation);
 

@@ -6,11 +6,11 @@ const errorMessage = document.querySelector("#error-message");
 const output = document.querySelector("#output");
 const title = document.querySelector("#title");
 const meta = document.querySelector("#meta");
+const formState = document.querySelector("#form-state");
 const submit = form.querySelector("button[type=submit]");
 const buttonLabel = submit.querySelector(".button-label");
 const copy = document.querySelector("#copy");
 const download = document.querySelector("#download");
-const example = document.querySelector("#example");
 
 let current = null;
 
@@ -20,6 +20,7 @@ function setLoading(loading) {
   submit.disabled = loading;
   input.readOnly = loading;
   buttonLabel.textContent = loading ? "Converting…" : "Convert";
+  formState.textContent = loading ? "Processing" : "Ready";
 }
 
 form.addEventListener("submit", async (event) => {
@@ -84,12 +85,6 @@ download.addEventListener("click", () => {
   link.download = `${filename}.md`;
   link.click();
   window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
-});
-
-example.addEventListener("click", () => {
-  input.value = "https://example.com";
-  input.focus();
-  form.requestSubmit();
 });
 
 const initialUrl = new URL(location.href).searchParams.get("url");
