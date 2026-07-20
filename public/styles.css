@@ -1,5 +1,6 @@
 :root {
   color-scheme: dark;
+  --orange: oklch(0.7 0.2 45);
   background: #000;
   color: #fff;
   font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -54,21 +55,41 @@ main {
   place-items: center;
 }
 
-.input-shell,
+.input-shell {
+  position: relative;
+  isolation: isolate;
+  width: min(520px, 100%);
+  margin: 0 auto;
+}
+
+.input-shell::before {
+  position: absolute;
+  z-index: -1;
+  inset: -88px -112px;
+  content: "";
+  pointer-events: none;
+  background-image: radial-gradient(circle, color-mix(in oklch, var(--orange) 50%, transparent) 1px, transparent 1.35px);
+  background-size: 14px 14px;
+  opacity: 0.42;
+  filter: drop-shadow(0 0 4px color-mix(in oklch, var(--orange) 42%, transparent));
+  -webkit-mask-image: radial-gradient(ellipse at center, #000 0%, rgba(0, 0, 0, 0.75) 28%, transparent 72%);
+  mask-image: radial-gradient(ellipse at center, #000 0%, rgba(0, 0, 0, 0.75) 28%, transparent 72%);
+}
+
 form {
   width: 100%;
 }
 
 .input-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 52px;
-  height: 52px;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  height: 44px;
   border: 1px solid #292929;
   background: #080808;
 }
 
 .input-row:focus-within {
-  border-color: #686868;
+  border-color: color-mix(in oklch, var(--orange) 62%, #292929);
 }
 
 input {
@@ -79,7 +100,7 @@ input {
   outline: 0;
   background: transparent;
   color: #fff;
-  font-size: 15px;
+  font-size: 14px;
 }
 
 input::placeholder {
@@ -88,16 +109,16 @@ input::placeholder {
 
 .input-row > button {
   border: 0;
-  border-left: 1px solid #292929;
-  background: transparent;
-  color: #aaa;
-  font-size: 19px;
+  border-left: 1px solid color-mix(in oklch, var(--orange) 32%, #292929);
+  background: color-mix(in oklch, var(--orange) 8%, #080808);
+  color: var(--orange);
+  font-size: 17px;
 }
 
 .input-row > button:hover,
 .input-row > button:focus-visible {
-  background: #fff;
-  color: #000;
+  background: color-mix(in oklch, var(--orange) 18%, #080808);
+  color: color-mix(in oklch, var(--orange) 82%, #fff);
   outline: 0;
 }
 
@@ -132,7 +153,7 @@ h1 {
 
 #meta {
   margin: 6px 0 0;
-  color: #777;
+  color: color-mix(in oklch, var(--orange) 62%, #777);
   font-size: 12px;
 }
 
@@ -151,8 +172,8 @@ h1 {
 
 .actions button:hover,
 .actions button:focus-visible {
-  color: #fff;
-  outline: 1px solid #555;
+  color: var(--orange);
+  outline: 1px solid color-mix(in oklch, var(--orange) 48%, #555);
   outline-offset: 2px;
 }
 
@@ -172,7 +193,7 @@ pre {
 }
 
 pre:focus-visible {
-  border-color: #555;
+  border-color: color-mix(in oklch, var(--orange) 48%, #555);
   outline: 0;
 }
 
@@ -203,5 +224,9 @@ pre:focus-visible {
 
   pre {
     padding: 16px;
+  }
+
+  .input-shell::before {
+    inset-inline: -48px;
   }
 }
