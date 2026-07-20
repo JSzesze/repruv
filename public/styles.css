@@ -32,6 +32,44 @@ button {
   cursor: pointer;
 }
 
+.site-header {
+  position: fixed;
+  z-index: 10;
+  top: 24px;
+  left: 28px;
+}
+
+.site-header a {
+  display: flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 8px;
+  color: #b8b8b8;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.site-header a:hover,
+.site-header a:focus-visible {
+  color: #fff;
+  outline: 0;
+}
+
+.site-header a:focus-visible {
+  box-shadow: 0 1px 0 var(--orange);
+}
+
+.brand-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--orange);
+  box-shadow: 0 0 6px color-mix(in oklch, var(--orange) 70%, transparent);
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -212,6 +250,11 @@ pre:focus-visible {
 }
 
 @media (max-width: 520px) {
+  .site-header {
+    top: 16px;
+    left: 16px;
+  }
+
   main {
     width: min(100% - 24px, 760px);
   }
