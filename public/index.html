@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#f5f3ed" />
+    <meta name="theme-color" content="#171614" />
     <meta name="description" content="Turn a public webpage or X post into clean Markdown." />
     <meta property="og:title" content="Repruv — URL to Markdown" />
     <meta property="og:description" content="Paste a public URL. Get clean Markdown." />
@@ -16,10 +16,15 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/styles.css" />
+    <script src="/dotted-glow.js" defer></script>
     <script src="/app.js" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#url">Skip to URL input</a>
+
+    <div class="dotted-glow" aria-hidden="true">
+      <canvas id="dotted-glow-canvas"></canvas>
+    </div>
 
     <div class="page">
       <header>
