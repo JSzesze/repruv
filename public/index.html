@@ -8,6 +8,7 @@
     <title>Repruv</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/styles.css" />
+    <script src="/dotted-glow.js" defer></script>
     <script src="/app.js" defer></script>
   </head>
   <body>
@@ -21,6 +22,10 @@
     <main>
       <section class="converter" aria-label="URL to Markdown">
         <div class="input-shell">
+          <div class="dot-field" aria-hidden="true">
+            <canvas id="dotted-glow-canvas"></canvas>
+          </div>
+
           <form id="extract-form">
             <label class="sr-only" for="url">Public URL</label>
             <div class="input-row">
