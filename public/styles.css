@@ -124,13 +124,13 @@ form {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 40px;
   height: 40px;
-  border: 1px solid #25211f;
+  border: 1px solid #322d2a;
   background: #060606;
   transition: border-color 180ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .input-row:focus-within {
-  border-color: color-mix(in oklch, var(--orange) 34%, #34302e);
+  border-color: color-mix(in oklch, var(--orange) 30%, #45403d);
 }
 
 input {
@@ -141,20 +141,43 @@ input {
   outline: 0;
   background: transparent;
   color: #fff;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 input::placeholder {
-  color: #5d5a58;
+  color: #77716d;
 }
 
 .input-row > button {
+  position: relative;
+  display: grid;
+  place-items: center;
   border: 0;
-  border-left: 1px solid #282320;
+  border-left: 1px solid #322d2a;
   background: #080706;
   color: color-mix(in oklch, var(--orange) 54%, #777);
-  font-size: 15px;
   transition: background-color 180ms cubic-bezier(0.25, 1, 0.5, 1), color 180ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.button-icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.input-row > button::after {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--orange);
+  content: "";
+  opacity: 0;
 }
 
 .input-row > button:hover,
@@ -167,6 +190,14 @@ input::placeholder {
 .input-row > button:disabled {
   cursor: wait;
   color: #555;
+}
+
+form.is-loading .button-icon {
+  opacity: 0;
+}
+
+form.is-loading .input-row > button::after {
+  opacity: 0.72;
 }
 
 body:has(.result:not([hidden])) .converter {

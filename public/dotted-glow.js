@@ -5,7 +5,8 @@
   if (!canvas || !container || !context) return;
 
   const gap = 12;
-  const radius = 1.7;
+  const coreRadius = 1;
+  const glowRadius = 1.35;
   const opacity = 0.6;
   const speedMin = 0.4;
   const speedMax = 1.3;
@@ -40,25 +41,29 @@
   function draw(now, continueAnimation = true) {
     context.clearRect(0, 0, width, height);
     context.save();
-    context.fillStyle = dotColor;
 
     const time = now / 1000;
     for (const dot of dots) {
       const pulse = (Math.sin(time * dot.speed + dot.phase) + 1) / 2;
       const alpha = 0.12 + pulse * 0.88;
 
-      if (alpha > 0.58) {
-        const glow = (alpha - 0.58) / 0.42;
+      if (alpha > 0.62) {
+        const glow = (alpha - 0.62) / 0.38;
+        context.fillStyle = glowColor;
+        context.globalAlpha = glow * opacity * 0.44;
         context.shadowColor = glowColor;
-        context.shadowBlur = 9 * glow;
-      } else {
-        context.shadowColor = "transparent";
-        context.shadowBlur = 0;
+        context.shadowBlur = 5 * glow;
+        context.beginPath();
+        context.arc(dot.x, dot.y, glowRadius, 0, Math.PI * 2);
+        context.fill();
       }
 
+      context.shadowColor = "transparent";
+      context.shadowBlur = 0;
+      context.fillStyle = dotColor;
       context.globalAlpha = alpha * opacity;
       context.beginPath();
-      context.arc(dot.x, dot.y, radius, 0, Math.PI * 2);
+      context.arc(dot.x, dot.y, coreRadius, 0, Math.PI * 2);
       context.fill();
     }
 
