@@ -6,12 +6,10 @@
 
   const gap = 12;
   const coreRadius = 1;
-  const glowRadius = 1.35;
   const opacity = 0.6;
   const speedMin = 0.4;
   const speedMax = 1.3;
   const dotColor = "rgba(217, 85, 18, 0.72)";
-  const glowColor = "rgba(255, 118, 31, 0.96)";
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
   let width = 0;
@@ -47,19 +45,6 @@
       const pulse = (Math.sin(time * dot.speed + dot.phase) + 1) / 2;
       const alpha = 0.12 + pulse * 0.88;
 
-      if (alpha > 0.62) {
-        const glow = (alpha - 0.62) / 0.38;
-        context.fillStyle = glowColor;
-        context.globalAlpha = glow * opacity * 0.44;
-        context.shadowColor = glowColor;
-        context.shadowBlur = 5 * glow;
-        context.beginPath();
-        context.arc(dot.x, dot.y, glowRadius, 0, Math.PI * 2);
-        context.fill();
-      }
-
-      context.shadowColor = "transparent";
-      context.shadowBlur = 0;
       context.fillStyle = dotColor;
       context.globalAlpha = alpha * opacity;
       context.beginPath();

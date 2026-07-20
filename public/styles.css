@@ -67,7 +67,6 @@ button {
   height: 4px;
   border-radius: 50%;
   background: var(--orange);
-  box-shadow: 0 0 6px color-mix(in oklch, var(--orange) 70%, transparent);
 }
 
 .sr-only {
