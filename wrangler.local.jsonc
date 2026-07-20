@@ -1,0 +1,22 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "url-to-markdown-local",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-18",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*", "/health"]
+  },
+  "r2_buckets": [
+    {
+      "binding": "RESULTS",
+      "bucket_name": "url-to-markdown-cache"
+    }
+  ],
+  "vars": {
+    "CACHE_TTL_SECONDS": "604800",
+    "ENABLE_BROWSER_FALLBACK": "false"
+  }
+}

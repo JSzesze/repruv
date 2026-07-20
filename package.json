@@ -1,0 +1,24 @@
+{
+  "name": "url-to-markdown",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "dev:local": "wrangler dev --config wrangler.local.jsonc",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "defuddle": "^0.19.1",
+    "linkedom": "^0.18.13"
+  },
+  "devDependencies": {
+    "@types/node": "^24.6.1",
+    "typescript": "^5.9.2",
+    "vitest": "^4.1.10",
+    "wrangler": "^4.112.0"
+  }
+}

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Turn a public webpage or X post into clean Markdown." />
+    <title>URL → Markdown</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="mark" aria-hidden="true">↓</div>
+        <div>
+          <p class="eyebrow">A free public utility</p>
+          <h1>URL <span>→</span> Markdown</h1>
+          <p class="lede">Paste a public webpage or X post. Get clean, portable Markdown back.</p>
+        </div>
+      </header>
+
+      <form id="extract-form">
+        <label for="url">Public URL</label>
+        <div class="input-row">
+          <input
+            id="url"
+            name="url"
+            type="url"
+            inputmode="url"
+            autocomplete="url"
+            placeholder="https://example.com/article"
+            required
+          />
+          <button type="submit">Convert</button>
+        </div>
+        <p class="privacy">Results are cached and shared for public URLs. Do not submit private or authenticated links.</p>
+      </form>
+
+      <section id="result" class="result" hidden aria-live="polite">
+        <div class="result-header">
+          <div>
+            <p id="meta" class="eyebrow"></p>
+            <h2 id="title"></h2>
+          </div>
+          <div class="actions">
+            <button id="copy" class="secondary" type="button">Copy</button>
+            <button id="download" class="secondary" type="button">Download .md</button>
+          </div>
+        </div>
+        <div class="tabs" role="tablist" aria-label="Result format">
+          <button class="tab active" type="button" role="tab" data-format="markdown" aria-selected="true">Markdown</button>
+          <button class="tab" type="button" role="tab" data-format="json" aria-selected="false">JSON</button>
+        </div>
+        <pre><code id="output"></code></pre>
+      </section>
+
+      <section id="error" class="error" hidden aria-live="assertive"></section>
+
+      <footer>
+        <code>GET /api/markdown?url=…</code>
+        <span>or</span>
+        <code>GET /api/extract?url=…</code>
+      </footer>
+    </main>
+  </body>
+</html>
