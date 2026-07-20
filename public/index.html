@@ -3,64 +3,147 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Turn a public webpage or X post into clean Markdown." />
-    <title>URL → Markdown</title>
+    <meta name="theme-color" content="#171613" />
+    <meta name="description" content="Strip any public webpage or X post down to clean, portable Markdown." />
+    <meta property="og:title" content="Repruv — Web in. Markdown out." />
+    <meta property="og:description" content="A free public URL-to-Markdown utility." />
+    <title>Repruv — Web in. Markdown out.</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Atkinson+Hyperlegible+Next:ital,wght@0,400;0,600;0,700;1,400&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="/styles.css" />
     <script src="/app.js" defer></script>
   </head>
   <body>
-    <main>
-      <header>
-        <div class="mark" aria-hidden="true">↓</div>
-        <div>
-          <p class="eyebrow">A free public utility</p>
-          <h1>URL <span>→</span> Markdown</h1>
-          <p class="lede">Paste a public webpage or X post. Get clean, portable Markdown back.</p>
-        </div>
-      </header>
+    <a class="skip-link" href="#main">Skip to converter</a>
 
-      <form id="extract-form">
-        <label for="url">Public URL</label>
-        <div class="input-row">
-          <input
-            id="url"
-            name="url"
-            type="url"
-            inputmode="url"
-            autocomplete="url"
-            placeholder="https://example.com/article"
-            required
-          />
-          <button type="submit">Convert</button>
-        </div>
-        <p class="privacy">Results are cached and shared for public URLs. Do not submit private or authenticated links.</p>
-      </form>
+    <div class="site-shell">
+      <nav class="topbar" aria-label="Primary navigation">
+        <a class="wordmark" href="/" aria-label="Repruv home">REPRUV<span aria-hidden="true">/</span></a>
+        <p class="service-state"><span class="live-dot" aria-hidden="true"></span>Public utility</p>
+        <a class="api-link" href="#api">API <span aria-hidden="true">↓</span></a>
+      </nav>
 
-      <section id="result" class="result" hidden aria-live="polite">
-        <div class="result-header">
-          <div>
-            <p id="meta" class="eyebrow"></p>
+      <main id="main">
+        <section class="hero" aria-labelledby="hero-title">
+          <div class="section-label">
+            <span>01 / INPUT</span>
+            <span>PUBLIC URL → PORTABLE TEXT</span>
+          </div>
+
+          <h1 id="hero-title">WEB IN.<br /><span>MARKDOWN OUT.</span></h1>
+
+          <div class="hero-notes">
+            <p>Strip any public webpage or X post down to clean, portable Markdown.</p>
+            <ul aria-label="Service features">
+              <li>NO LOGIN</li>
+              <li>SHARED CACHE</li>
+              <li>FREE TO USE</li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="converter" aria-label="URL converter">
+          <form id="extract-form">
+            <div class="form-status">
+              <label for="url">URL SOURCE</label>
+              <span id="form-state" role="status">READY</span>
+            </div>
+
+            <div class="input-row">
+              <input
+                id="url"
+                name="url"
+                type="url"
+                inputmode="url"
+                autocomplete="url"
+                autocapitalize="none"
+                spellcheck="false"
+                placeholder="https://example.com/article"
+                aria-describedby="privacy"
+                required
+              />
+              <button class="convert-button" type="submit">
+                <span class="button-label">Convert</span>
+                <span class="button-arrow" aria-hidden="true">↘</span>
+              </button>
+            </div>
+
+            <div class="form-foot">
+              <p id="privacy">Public URLs only. Results are cached and shared.</p>
+              <button id="example" class="text-button" type="button">Try an example <span aria-hidden="true">↗</span></button>
+            </div>
+            <div class="progress" aria-hidden="true"><span></span></div>
+          </form>
+        </section>
+
+        <section id="result" class="result" hidden aria-live="polite" aria-busy="false">
+          <div class="section-label result-label">
+            <span>02 / OUTPUT</span>
+            <span id="meta"></span>
+          </div>
+
+          <div class="result-heading">
             <h2 id="title"></h2>
+            <div class="actions">
+              <button id="copy" class="utility-button" type="button">Copy</button>
+              <button id="download" class="utility-button" type="button">Download .md</button>
+            </div>
           </div>
-          <div class="actions">
-            <button id="copy" class="secondary" type="button">Copy</button>
-            <button id="download" class="secondary" type="button">Download .md</button>
+
+          <div class="result-tools">
+            <div class="tabs" role="tablist" aria-label="Result format">
+              <button
+                id="tab-markdown"
+                class="tab active"
+                type="button"
+                role="tab"
+                data-format="markdown"
+                aria-controls="output-panel"
+                aria-selected="true"
+              >Markdown</button>
+              <button
+                id="tab-json"
+                class="tab"
+                type="button"
+                role="tab"
+                data-format="json"
+                aria-controls="output-panel"
+                aria-selected="false"
+              >JSON</button>
+            </div>
+            <span class="output-state">CLEAN / READY</span>
           </div>
-        </div>
-        <div class="tabs" role="tablist" aria-label="Result format">
-          <button class="tab active" type="button" role="tab" data-format="markdown" aria-selected="true">Markdown</button>
-          <button class="tab" type="button" role="tab" data-format="json" aria-selected="false">JSON</button>
-        </div>
-        <pre><code id="output"></code></pre>
-      </section>
 
-      <section id="error" class="error" hidden aria-live="assertive"></section>
+          <div id="output-panel" class="output-panel" role="tabpanel" aria-labelledby="tab-markdown" tabindex="0">
+            <pre><code id="output"></code></pre>
+          </div>
+        </section>
 
-      <footer>
-        <code>GET /api/markdown?url=…</code>
-        <span>or</span>
-        <code>GET /api/extract?url=…</code>
+        <section id="error" class="error" hidden aria-live="assertive">
+          <span>CONVERSION FAILED</span>
+          <p id="error-message"></p>
+        </section>
+      </main>
+
+      <footer id="api">
+        <div class="section-label">
+          <span>03 / API</span>
+          <span>NO KEY REQUIRED</span>
+        </div>
+        <div class="api-routes">
+          <code><span>GET</span> /api/markdown?url=…</code>
+          <code><span>GET</span> /api/extract?url=…</code>
+        </div>
+        <div class="footer-line">
+          <p>REPRUV / BUILT ON CLOUDFLARE</p>
+          <p>THE WEB, REDUCED TO WHAT MATTERS.</p>
+        </div>
       </footer>
-    </main>
+    </div>
   </body>
 </html>
