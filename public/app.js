@@ -6,7 +6,6 @@ const errorMessage = document.querySelector("#error-message");
 const output = document.querySelector("#output");
 const title = document.querySelector("#title");
 const meta = document.querySelector("#meta");
-const formState = document.querySelector("#form-state");
 const submit = form.querySelector("button[type=submit]");
 const buttonLabel = submit.querySelector(".button-label");
 const copy = document.querySelector("#copy");
@@ -19,8 +18,7 @@ function setLoading(loading) {
   form.setAttribute("aria-busy", String(loading));
   submit.disabled = loading;
   input.readOnly = loading;
-  buttonLabel.textContent = loading ? "Converting…" : "Convert";
-  formState.textContent = loading ? "Processing" : "Ready";
+  buttonLabel.textContent = loading ? "…" : "→";
 }
 
 form.addEventListener("submit", async (event) => {
