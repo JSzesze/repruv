@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /health
+Disallow: /__cached/
+
+Sitemap: https://repruv.com/sitemap.xml

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="2" fill="#f26a21" opacity="0.45" />
+    </pattern>
+    <radialGradient id="fade">
+      <stop offset="0" stop-color="#fff" />
+      <stop offset="0.72" stop-color="#fff" stop-opacity="0.36" />
+      <stop offset="1" stop-color="#fff" stop-opacity="0" />
+    </radialGradient>
+    <mask id="dot-fade">
+      <rect width="1200" height="630" fill="url(#fade)" />
+    </mask>
+  </defs>
+  <rect width="1200" height="630" fill="#000" />
+  <rect x="160" y="120" width="880" height="390" fill="url(#dots)" mask="url(#dot-fade)" />
+  <text x="88" y="92" fill="#b8b8b8" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" letter-spacing="5">REPRUV</text>
+  <circle cx="202" cy="86" r="4" fill="#f26a21" />
+  <rect x="280" y="275" width="640" height="80" fill="#060606" stroke="#3a302b" />
+  <line x1="840" y1="275" x2="840" y2="355" stroke="#3a302b" />
+  <text x="310" y="325" fill="#77716d" font-family="Arial, Helvetica, sans-serif" font-size="25">Paste a URL</text>
+  <path d="M866 315h24m-8-9 9 9-9 9" fill="none" stroke="#f26a21" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+  <text x="600" y="445" text-anchor="middle" fill="#8a817d" font-family="Arial, Helvetica, sans-serif" font-size="20">Public webpages and X posts → clean Markdown</text>
+</svg>

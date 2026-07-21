@@ -4,10 +4,68 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#000000" />
-    <meta name="description" content="Turn a public webpage or X post into clean Markdown." />
-    <title>Repruv</title>
+    <meta
+      name="description"
+      content="Convert public webpages and X posts into clean Markdown. Free, fast, and cached at the edge."
+    />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Repruv" />
+    <meta property="og:title" content="Repruv — URL to Markdown Converter" />
+    <meta
+      property="og:description"
+      content="Convert public webpages and X posts into clean Markdown. Free, fast, and cached at the edge."
+    />
+    <meta property="og:url" content="https://repruv.com/" />
+    <meta property="og:image" content="https://repruv.com/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Repruv URL to Markdown converter" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Repruv — URL to Markdown Converter" />
+    <meta
+      name="twitter:description"
+      content="Convert public webpages and X posts into clean Markdown. Free, fast, and cached at the edge."
+    />
+    <meta name="twitter:image" content="https://repruv.com/og.png" />
+    <title>Repruv — URL to Markdown Converter</title>
+    <link rel="canonical" href="https://repruv.com/" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/styles.css" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://repruv.com/#website",
+            "url": "https://repruv.com/",
+            "name": "Repruv",
+            "description": "Convert public webpages and X posts into clean Markdown."
+          },
+          {
+            "@type": "SoftwareApplication",
+            "@id": "https://repruv.com/#application",
+            "name": "Repruv",
+            "url": "https://repruv.com/",
+            "description": "A free URL to Markdown converter for public webpages and X posts.",
+            "applicationCategory": "UtilitiesApplication",
+            "operatingSystem": "Any",
+            "isAccessibleForFree": true,
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD"
+            },
+            "featureList": [
+              "Convert public webpages to Markdown",
+              "Convert public X posts to Markdown",
+              "Edge-cached results"
+            ]
+          }
+        ]
+      }
+    </script>
     <script src="/dotted-glow.js" defer></script>
     <script src="/app.js" defer></script>
   </head>
@@ -20,6 +78,8 @@
     </header>
 
     <main>
+      <h1 class="sr-only">Repruv URL to Markdown converter</h1>
+      <p class="sr-only">Convert public webpages and X posts into clean Markdown for free.</p>
       <section class="converter" aria-label="URL to Markdown">
         <div class="input-shell">
           <div class="dot-field" aria-hidden="true">
@@ -58,7 +118,7 @@
       <section id="result" class="result" hidden aria-live="polite" aria-busy="false">
         <header class="result-header">
           <div>
-            <h1 id="title"></h1>
+            <h2 id="title"></h2>
             <p id="meta"></p>
           </div>
           <div class="actions">

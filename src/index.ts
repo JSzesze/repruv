@@ -8,6 +8,7 @@ const API_HEADERS = {
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Origin": "*",
   "X-Content-Type-Options": "nosniff",
+  "X-Robots-Tag": "noindex, nofollow",
 };
 
 function json(data: unknown, init: ResponseInit = {}) {

@@ -216,7 +216,7 @@ body:has(.result:not([hidden])) .converter {
   margin-bottom: 16px;
 }
 
-h1 {
+#title {
   margin: 0;
   font-size: 18px;
   font-weight: 500;

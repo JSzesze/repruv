@@ -8,6 +8,7 @@
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",
     "dev:local": "wrangler dev --config wrangler.local.jsonc",
+    "report:usage": "node scripts/usage-report.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },

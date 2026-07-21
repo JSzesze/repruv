@@ -99,3 +99,13 @@ DNS validation and the subsequent HTTP fetch are separate operations, so URL-fet
 | `ENABLE_BROWSER_FALLBACK` | `true` | Set to `false` to operate without Browser Run |
 
 The Worker bindings are declared in `wrangler.jsonc`: `RESULTS`, `BROWSER`, `MISS_LIMITER`, and `ASSETS`.
+
+## SEO and product telemetry
+
+The production site publishes a canonical URL, Open Graph and X card metadata, `WebSite` and `SoftwareApplication` structured data, a social preview image, `robots.txt`, and `sitemap.xml`. API and health responses send `X-Robots-Tag: noindex, nofollow` so only the product page is indexed.
+
+Usage is monitored from Cloudflare's zone and Worker analytics. Reports compare visits, homepage requests, `/api/extract` and `/api/markdown` attempts, HTTP outcomes, and Worker errors over rolling periods. This requires no client-side tracker and does not add storage of submitted URLs, IP addresses, or user agents to the application.
+
+Run the same report locally with `npm run report:usage`. It uses the existing Wrangler OAuth session, compares the last three complete days with the preceding three (the analytics retention available on the current plan), and verifies the live canonical URL, metadata, structured data, social image, robots file, sitemap, and `www` redirect.
+
+For search performance, add `https://repruv.com/` to Google Search Console and submit `https://repruv.com/sitemap.xml`. Technical SEO is observable immediately; impressions, clicks, and query rankings require Search Console data after Google discovers the site.
