@@ -10,6 +10,10 @@
     {
       "pattern": "repruv.com/*",
       "zone_name": "repruv.com"
+    },
+    {
+      "pattern": "www.repruv.com/*",
+      "zone_name": "repruv.com"
     }
   ],
   "observability": {

@@ -188,6 +188,11 @@ async function handleExtraction(
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+    if (url.hostname === "www.repruv.com") {
+      url.hostname = "repruv.com";
+      url.protocol = "https:";
+      return Response.redirect(url.toString(), 308);
+    }
     if (request.method === "OPTIONS" && url.pathname.startsWith("/api/")) {
       return new Response(null, { status: 204, headers: API_HEADERS });
     }
