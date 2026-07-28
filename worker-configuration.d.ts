@@ -16,6 +16,15 @@ interface R2Bucket {
   ): Promise<unknown>;
 }
 
+interface D1PreparedStatement {
+  bind(...values: unknown[]): D1PreparedStatement;
+  run(): Promise<unknown>;
+}
+
+interface D1Database {
+  prepare(query: string): D1PreparedStatement;
+}
+
 interface ExecutionContext {
   waitUntil(promise: Promise<unknown>): void;
 }

@@ -5,6 +5,7 @@ import { join } from "node:path";
 
 const SITE = "https://repruv.com";
 const ZONE = "repruv.com";
+const ANALYTICS_DATABASE = "repruv-analytics";
 const WINDOW_DAYS = 3;
 
 function isoDay(date) {
@@ -15,6 +16,12 @@ function shiftDays(date, days) {
   const shifted = new Date(date);
   shifted.setDate(shifted.getDate() + days);
   return shifted;
+}
+
+function shiftUtcDay(day, days) {
+  const date = new Date(`${day}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
 }
 
 function percentageChange(current, previous) {
@@ -139,6 +146,70 @@ function summarize(rows) {
   return totals;
 }
 
+function d1UsageRows(start, end) {
+  const sql = `SELECT
+    day,
+    event_name,
+    outcome,
+    cache_status,
+    source,
+    provider,
+    status_code,
+    event_count,
+    duration_ms,
+    words,
+    markdown_bytes
+  FROM usage_daily
+  WHERE day >= '${start.slice(0, 10)}'
+    AND day < '${end.slice(0, 10)}'
+  ORDER BY day, event_name, outcome`;
+  const output = execFileSync(
+    join(process.cwd(), "node_modules/.bin/wrangler"),
+    ["d1", "execute", ANALYTICS_DATABASE, "--remote", "--command", sql, "--json"],
+    { encoding: "utf8" },
+  );
+  const batches = JSON.parse(output);
+  return batches.flatMap((batch) => batch.results || []);
+}
+
+function summarizeFirstParty(rows) {
+  const totals = {
+    browserPageLoads: 0,
+    cacheHits: 0,
+    cacheMisses: 0,
+    conversionAttempts: 0,
+    conversionErrors: 0,
+    conversionSuccesses: 0,
+    durationMs: 0,
+    markdownBytes: 0,
+    words: 0,
+  };
+
+  for (const row of rows) {
+    const count = Number(row.event_count || 0);
+    if (row.event_name === "browser_page_view") {
+      totals.browserPageLoads += count;
+      continue;
+    }
+    if (row.event_name !== "conversion") continue;
+    totals.conversionAttempts += count;
+    totals.durationMs += Number(row.duration_ms || 0);
+    if (row.outcome === "success") {
+      totals.conversionSuccesses += count;
+      totals.markdownBytes += Number(row.markdown_bytes || 0);
+      totals.words += Number(row.words || 0);
+      if (row.cache_status === "MISS") totals.cacheMisses += count;
+      else if (row.cache_status === "HIT" || row.cache_status === "STALE") {
+        totals.cacheHits += count;
+      }
+    } else {
+      totals.conversionErrors += count;
+    }
+  }
+
+  return totals;
+}
+
 async function technicalSeo() {
   const [root, robots, sitemap, image, www] = await Promise.all([
     fetch(`${SITE}/`, { headers: { "User-Agent": "repruv-monitor/1.0" } }),
@@ -192,6 +263,12 @@ for (const [index, start] of dayStarts.entries()) {
 const seo = await technicalSeo();
 const previous = summarize(dailyRows.slice(0, WINDOW_DAYS).flat());
 const current = summarize(dailyRows.slice(WINDOW_DAYS).flat());
+const firstPartyPrevious = summarizeFirstParty(d1UsageRows(previousStart, currentStart));
+const firstPartyCurrent = summarizeFirstParty(d1UsageRows(currentStart, currentEnd));
+const utcToday = new Date().toISOString().slice(0, 10);
+const firstPartyToday = summarizeFirstParty(
+  d1UsageRows(utcToday, shiftUtcDay(utcToday, 1)),
+);
 const checks = Object.entries(seo);
 const healthy = checks.filter(([, value]) => value).length;
 
@@ -221,3 +298,32 @@ if (current.apiAttempts === 0) {
   const successRate = ((current.apiSuccesses / current.apiAttempts) * 100).toFixed(1);
   console.log(`\nObservation: conversion success rate was ${successRate}%.`);
 }
+
+console.log(`\n## Privacy-safe first-party counters`);
+console.log(`\nThese counters began when D1 telemetry was deployed; they use no URLs, IPs, cookies, or user-agent strings.`);
+console.log(`\n| Metric | Last ${WINDOW_DAYS} days | Prior ${WINDOW_DAYS} days | Change |`);
+console.log(`| --- | ---: | ---: | ---: |`);
+for (const [label, key] of [
+  ["Browser page loads", "browserPageLoads"],
+  ["Conversion attempts", "conversionAttempts"],
+  ["Successful conversions", "conversionSuccesses"],
+  ["Conversion errors", "conversionErrors"],
+  ["Cache hits", "cacheHits"],
+  ["Cache misses", "cacheMisses"],
+]) {
+  console.log(
+    `| ${label} | ${firstPartyCurrent[key]} | ${firstPartyPrevious[key]} | ${percentageChange(firstPartyCurrent[key], firstPartyPrevious[key])} |`,
+  );
+}
+if (firstPartyCurrent.conversionAttempts > 0) {
+  console.log(
+    `\nAverage conversion latency: ${Math.round(firstPartyCurrent.durationMs / firstPartyCurrent.conversionAttempts)} ms`,
+  );
+}
+
+console.log(`\nCurrent UTC day (${utcToday}, partial):`);
+console.log(`- Browser page loads: ${firstPartyToday.browserPageLoads}`);
+console.log(`- Conversion attempts: ${firstPartyToday.conversionAttempts}`);
+console.log(`- Successful conversions: ${firstPartyToday.conversionSuccesses}`);
+console.log(`- Conversion errors: ${firstPartyToday.conversionErrors}`);
+console.log(`- Cache hits / misses: ${firstPartyToday.cacheHits} / ${firstPartyToday.cacheMisses}`);

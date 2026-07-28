@@ -9,6 +9,13 @@
     "binding": "ASSETS",
     "run_worker_first": ["/api/*", "/health"]
   },
+  "d1_databases": [
+    {
+      "binding": "ANALYTICS",
+      "database_name": "repruv-analytics",
+      "database_id": "d6c33a2c-483f-4f25-85c4-6db30f15a0bd"
+    }
+  ],
   "r2_buckets": [
     {
       "binding": "RESULTS",

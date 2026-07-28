@@ -43,6 +43,7 @@ export interface RateLimitBinding {
 }
 
 export interface Env {
+  ANALYTICS?: D1Database;
   ASSETS: { fetch(request: Request): Promise<Response> };
   BROWSER?: BrowserRunBinding;
   CACHE_TTL_SECONDS?: string;

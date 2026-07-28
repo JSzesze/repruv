@@ -1,3 +1,4 @@
+import { recordUsage } from "./analytics";
 import { readCachedResult, resultAgeSeconds, writeCachedResult } from "./cache";
 import { extractUrl } from "./extract";
 import type { Env, ExtractionResponse, StoredExtraction } from "./types";
@@ -10,6 +11,33 @@ const API_HEADERS = {
   "X-Content-Type-Options": "nosniff",
   "X-Robots-Tag": "noindex, nofollow",
 };
+
+const SCANNER_PATHS = new Set([
+  "/.claude.json",
+  "/.claude/settings.json",
+  "/_next/build-manifest.json",
+  "/ngsw.json",
+  "/public/admin.json",
+  "/webpack-stats.json",
+]);
+
+function isKnownScannerPath(pathname: string) {
+  const path = pathname.toLowerCase();
+  return (
+    SCANNER_PATHS.has(path) ||
+    path === "/.env" ||
+    path === "/.git" ||
+    path === "/.hg" ||
+    path === "/.svn" ||
+    path.startsWith("/.env.") ||
+    path.startsWith("/.git/") ||
+    path.startsWith("/.hg/") ||
+    path.startsWith("/.svn/") ||
+    path.startsWith("/wp-") ||
+    path.startsWith("/wordpress/") ||
+    path.endsWith(".php")
+  );
+}
 
 function json(data: unknown, init: ResponseInit = {}) {
   const headers = new Headers(init.headers);
@@ -132,32 +160,100 @@ async function handleExtraction(
   ctx: ExecutionContext,
   format: "json" | "markdown",
 ) {
+  const startedAt = Date.now();
   const rawUrl = await inputUrl(request);
-  if (!rawUrl) return errorResponse("A url parameter is required.");
+  if (!rawUrl) {
+    ctx.waitUntil(
+      recordUsage(env, {
+        durationMs: Date.now() - startedAt,
+        eventName: "conversion",
+        outcome: "missing_url",
+        statusCode: 400,
+      }),
+    );
+    return errorResponse("A url parameter is required.");
+  }
 
   let normalizedUrl: string;
   try {
     normalizedUrl = normalizeUrl(rawUrl);
   } catch (error) {
+    ctx.waitUntil(
+      recordUsage(env, {
+        durationMs: Date.now() - startedAt,
+        eventName: "conversion",
+        outcome: "invalid_url",
+        statusCode: 400,
+      }),
+    );
     return errorResponse(error instanceof Error ? error.message : "Invalid URL.");
   }
 
   const key = await cacheKeyForUrl(normalizedUrl);
   const edgeResult = await readEdge(request, key);
   if (edgeResult) {
+    ctx.waitUntil(
+      recordUsage(env, {
+        cacheStatus: "HIT",
+        durationMs: Date.now() - startedAt,
+        eventName: "conversion",
+        markdownBytes: edgeResult.stats.markdownBytes,
+        outcome: "success",
+        provider: edgeResult.provider,
+        source: "edge",
+        statusCode: 200,
+        words: edgeResult.stats.words,
+      }),
+    );
     return responseForResult(withCacheMetadata(edgeResult, key, "HIT"), format);
   }
 
   const cached = await readCachedResult(env, key);
   if (cached && !cached.stale) {
-    ctx.waitUntil(writeEdge(request, key, cached.result));
+    ctx.waitUntil(
+      Promise.all([
+        writeEdge(request, key, cached.result),
+        recordUsage(env, {
+          cacheStatus: "HIT",
+          durationMs: Date.now() - startedAt,
+          eventName: "conversion",
+          markdownBytes: cached.result.stats.markdownBytes,
+          outcome: "success",
+          provider: cached.result.provider,
+          source: "r2",
+          statusCode: 200,
+          words: cached.result.stats.words,
+        }),
+      ]).then(() => undefined),
+    );
     return responseForResult(withCacheMetadata(cached.result, key, "HIT"), format);
   }
 
   if (!(await enforceMissRateLimit(request, env))) {
     if (cached) {
+      ctx.waitUntil(
+        recordUsage(env, {
+          cacheStatus: "STALE",
+          durationMs: Date.now() - startedAt,
+          eventName: "conversion",
+          markdownBytes: cached.result.stats.markdownBytes,
+          outcome: "success",
+          provider: cached.result.provider,
+          source: "r2",
+          statusCode: 200,
+          words: cached.result.stats.words,
+        }),
+      );
       return responseForResult(withCacheMetadata(cached.result, key, "STALE"), format, true);
     }
+    ctx.waitUntil(
+      recordUsage(env, {
+        durationMs: Date.now() - startedAt,
+        eventName: "conversion",
+        outcome: "rate_limited",
+        statusCode: 429,
+      }),
+    );
     return errorResponse(
       "Too many uncached conversions. Try again in about a minute.",
       429,
@@ -171,13 +267,45 @@ async function handleExtraction(
       Promise.all([
         writeCachedResult(env, key, result),
         writeEdge(request, key, result),
+        recordUsage(env, {
+          cacheStatus: "MISS",
+          durationMs: Date.now() - startedAt,
+          eventName: "conversion",
+          markdownBytes: result.stats.markdownBytes,
+          outcome: "success",
+          provider: result.provider,
+          source: "origin",
+          statusCode: 200,
+          words: result.stats.words,
+        }),
       ]).then(() => undefined),
     );
     return responseForResult(withCacheMetadata(result, key, "MISS"), format);
   } catch (error) {
     if (cached) {
+      ctx.waitUntil(
+        recordUsage(env, {
+          cacheStatus: "STALE",
+          durationMs: Date.now() - startedAt,
+          eventName: "conversion",
+          markdownBytes: cached.result.stats.markdownBytes,
+          outcome: "success",
+          provider: cached.result.provider,
+          source: "r2",
+          statusCode: 200,
+          words: cached.result.stats.words,
+        }),
+      );
       return responseForResult(withCacheMetadata(cached.result, key, "STALE"), format, true);
     }
+    ctx.waitUntil(
+      recordUsage(env, {
+        durationMs: Date.now() - startedAt,
+        eventName: "conversion",
+        outcome: "extraction_failed",
+        statusCode: 502,
+      }),
+    );
     return errorResponse(
       error instanceof Error ? error.message : "Extraction failed.",
       502,
@@ -194,8 +322,46 @@ export default {
       url.protocol = "https:";
       return Response.redirect(url.toString(), 308);
     }
+    if (isKnownScannerPath(url.pathname)) {
+      return new Response("Not found", {
+        status: 404,
+        headers: {
+          "Cache-Control": "public, max-age=3600",
+          "Content-Type": "text/plain; charset=utf-8",
+          "X-Content-Type-Options": "nosniff",
+          "X-Robots-Tag": "noindex, nofollow",
+        },
+      });
+    }
     if (request.method === "OPTIONS" && url.pathname.startsWith("/api/")) {
       return new Response(null, { status: 204, headers: API_HEADERS });
+    }
+    if (url.pathname === "/api/event") {
+      const origin = request.headers.get("Origin");
+      const fetchSite = request.headers.get("Sec-Fetch-Site");
+      if (
+        request.method !== "POST" ||
+        origin !== "https://repruv.com" ||
+        (fetchSite && fetchSite !== "same-origin")
+      ) {
+        return new Response(null, { status: 404 });
+      }
+      const body = (await request.json().catch(() => null)) as { event?: unknown } | null;
+      if (body?.event !== "browser_page_view") {
+        return new Response(null, { status: 400 });
+      }
+      ctx.waitUntil(
+        recordUsage(env, {
+          eventName: "browser_page_view",
+          outcome: "loaded",
+          source: "browser",
+          statusCode: 204,
+        }),
+      );
+      return new Response(null, {
+        status: 204,
+        headers: { "Cache-Control": "no-store" },
+      });
     }
     if (url.pathname === "/health") {
       return json({ ok: true, service: "url-to-markdown", version: 1 });

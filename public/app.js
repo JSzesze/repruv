@@ -12,6 +12,13 @@ const download = document.querySelector("#download");
 
 let current = null;
 
+if (navigator.sendBeacon) {
+  navigator.sendBeacon(
+    "/api/event",
+    new Blob(['{"event":"browser_page_view"}'], { type: "application/json" }),
+  );
+}
+
 function setLoading(loading) {
   form.classList.toggle("is-loading", loading);
   form.setAttribute("aria-busy", String(loading));
