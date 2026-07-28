@@ -1,10 +1,14 @@
-# URL → Markdown
+# Repruv
 
-A small, anonymous Cloudflare service that accepts a public webpage or X/Twitter URL and returns clean Markdown. It was extracted from the URL conversion lab in [`JSzesze/distill`](https://github.com/JSzesze/distill).
+Paste a public webpage or X post. Get clean Markdown.
 
-Production: [https://repruv.com](https://repruv.com)
+**[Try Repruv →](https://repruv.com)**
 
-The service is free for end users. It uses direct extraction first, shares cached results across users, and spends Browser Run time only when ordinary HTML extraction fails.
+Repruv is a small, anonymous Cloudflare service extracted from the URL conversion lab in [`JSzesze/distill`](https://github.com/JSzesze/distill). It is free for end users, shares cached results across requests, and uses Browser Run only when ordinary extraction fails.
+
+- [Convert a URL to Markdown](https://repruv.com/url-to-markdown/)
+- [Convert a webpage to Markdown](https://repruv.com/webpage-to-markdown/)
+- [Convert an X post to Markdown](https://repruv.com/x-to-markdown/)
 
 ## API
 
@@ -104,8 +108,12 @@ The Worker bindings are declared in `wrangler.jsonc`: `RESULTS`, `BROWSER`, `MIS
 
 The production site publishes a canonical URL, Open Graph and X card metadata, `WebSite` and `SoftwareApplication` structured data, a social preview image, `robots.txt`, and `sitemap.xml`. API and health responses send `X-Robots-Tag: noindex, nofollow` so only the product page is indexed.
 
-Usage is monitored from Cloudflare's zone and Worker analytics. Reports compare visits, homepage requests, `/api/extract` and `/api/markdown` attempts, HTTP outcomes, and Worker errors over rolling periods. This requires no client-side tracker and does not add storage of submitted URLs, IP addresses, or user agents to the application.
+Usage is monitored with Cloudflare zone analytics and privacy-safe first-party counters in D1. The funnel records fixed event names and page labels for browser loads, first input engagement, submit, conversion outcome, copy, and download. Server events include cache status, extraction provider, latency, word count, and output size.
+
+The application does not store submitted URLs, URL hashes, referrers, IP addresses, cookies, or user-agent strings in its analytics data.
 
 Run the same report locally with `npm run report:usage`. It uses the existing Wrangler OAuth session, compares the last three complete days with the preceding three (the analytics retention available on the current plan), and verifies the live canonical URL, metadata, structured data, social image, robots file, sitemap, and `www` redirect.
 
-For search performance, add `https://repruv.com/` to Google Search Console and submit `https://repruv.com/sitemap.xml`. Technical SEO is observable immediately; impressions, clicks, and query rankings require Search Console data after Google discovers the site.
+New and updated public pages can be submitted to IndexNow with `npm run seo:indexnow`. For Google search performance, add `https://repruv.com/` to Google Search Console and submit `https://repruv.com/sitemap.xml`. Import the verified property into Bing Webmaster Tools. Technical SEO is observable immediately; impressions, clicks, and query rankings require webmaster data after discovery.
+
+Launch copy and the account-owner indexing checklist are in [`LAUNCH.md`](./LAUNCH.md).

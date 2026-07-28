@@ -12,6 +12,7 @@
 }
 
 html {
+  overflow-x: hidden;
   background: #000;
 }
 
@@ -117,6 +118,28 @@ main {
 
 form {
   width: 100%;
+}
+
+.tagline {
+  margin: 14px 0 0;
+  color: #5f5b58;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.tagline a {
+  color: #77716d;
+  text-decoration-color: #332b26;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.tagline a:hover,
+.tagline a:focus-visible {
+  color: color-mix(in oklch, var(--orange) 58%, #8a827d);
+  outline: 0;
+  text-decoration-color: currentColor;
 }
 
 .input-row {

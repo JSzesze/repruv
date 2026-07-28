@@ -12,12 +12,8 @@ const download = document.querySelector("#download");
 
 let current = null;
 
-if (navigator.sendBeacon) {
-  navigator.sendBeacon(
-    "/api/event",
-    new Blob(['{"event":"browser_page_view"}'], { type: "application/json" }),
-  );
-}
+const track = window.repruvTrack || (() => {});
+input.addEventListener("input", () => track("input_engaged"), { once: true });
 
 function setLoading(loading) {
   form.classList.toggle("is-loading", loading);
@@ -29,6 +25,7 @@ function setLoading(loading) {
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
+  track("conversion_submit");
   result.hidden = true;
   errorBox.hidden = true;
   errorMessage.textContent = "";
@@ -67,6 +64,7 @@ copy.addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(current.markdown);
     copy.textContent = "Copied";
+    track("copy_markdown");
   } catch {
     copy.textContent = "Copy failed";
   }
@@ -76,6 +74,7 @@ copy.addEventListener("click", async () => {
 
 download.addEventListener("click", () => {
   if (!current) return;
+  track("download_markdown");
 
   const filename = (current.title || "document")
     .normalize("NFKD")

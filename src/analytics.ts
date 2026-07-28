@@ -3,7 +3,13 @@ import type { Env } from "./types";
 export interface UsageEvent {
   cacheStatus?: "" | "HIT" | "MISS" | "STALE";
   durationMs?: number;
-  eventName: "browser_page_view" | "conversion";
+  eventName:
+    | "browser_page_view"
+    | "conversion"
+    | "conversion_submit"
+    | "copy_markdown"
+    | "download_markdown"
+    | "input_engaged";
   markdownBytes?: number;
   outcome?: string;
   provider?: string;
@@ -68,4 +74,3 @@ export async function recordUsage(env: Env, event: UsageEvent) {
     });
   }
 }
-

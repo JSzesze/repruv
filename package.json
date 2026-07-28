@@ -9,6 +9,7 @@
     "dev": "wrangler dev",
     "dev:local": "wrangler dev --config wrangler.local.jsonc",
     "report:usage": "node scripts/usage-report.mjs",
+    "seo:indexnow": "node scripts/submit-indexnow.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },

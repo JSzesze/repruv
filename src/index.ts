@@ -21,6 +21,22 @@ const SCANNER_PATHS = new Set([
   "/webpack-stats.json",
 ]);
 
+const BROWSER_EVENTS = new Set([
+  "browser_page_view",
+  "conversion_submit",
+  "copy_markdown",
+  "download_markdown",
+  "input_engaged",
+]);
+
+const BROWSER_PAGES = new Set([
+  "home",
+  "other",
+  "url-guide",
+  "webpage-guide",
+  "x-guide",
+]);
+
 function isKnownScannerPath(pathname: string) {
   const path = pathname.toLowerCase();
   return (
@@ -339,22 +355,49 @@ export default {
     if (url.pathname === "/api/event") {
       const origin = request.headers.get("Origin");
       const fetchSite = request.headers.get("Sec-Fetch-Site");
+      const contentLength = Number(request.headers.get("Content-Length") || 0);
       if (
         request.method !== "POST" ||
-        origin !== "https://repruv.com" ||
+        origin !== url.origin ||
         (fetchSite && fetchSite !== "same-origin")
       ) {
         return new Response(null, { status: 404 });
       }
-      const body = (await request.json().catch(() => null)) as { event?: unknown } | null;
-      if (body?.event !== "browser_page_view") {
+      if (contentLength > 128) {
+        return new Response(null, { status: 413 });
+      }
+      const rawBody = await request.text();
+      if (rawBody.length > 128) {
+        return new Response(null, { status: 413 });
+      }
+      const body = (() => {
+        try {
+          return JSON.parse(rawBody);
+        } catch {
+          return null;
+        }
+      })() as {
+        event?: unknown;
+        page?: unknown;
+      } | null;
+      if (
+        typeof body?.event !== "string" ||
+        !BROWSER_EVENTS.has(body.event) ||
+        typeof body.page !== "string" ||
+        !BROWSER_PAGES.has(body.page)
+      ) {
         return new Response(null, { status: 400 });
       }
       ctx.waitUntil(
         recordUsage(env, {
-          eventName: "browser_page_view",
-          outcome: "loaded",
-          source: "browser",
+          eventName: body.event as
+            | "browser_page_view"
+            | "conversion_submit"
+            | "copy_markdown"
+            | "download_markdown"
+            | "input_engaged",
+          outcome: body.event === "browser_page_view" ? "loaded" : "recorded",
+          source: body.page,
           statusCode: 204,
         }),
       );

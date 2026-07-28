@@ -1,0 +1,229 @@
+:root {
+  color-scheme: dark;
+  --orange: oklch(0.7 0.2 45);
+  --surface: oklch(0.09 0.004 45);
+  --text: oklch(0.88 0.006 45);
+  --muted: oklch(0.58 0.008 45);
+  --line: oklch(0.22 0.008 45);
+  background: var(--surface);
+  color: var(--text);
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--surface);
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background: var(--surface);
+}
+
+a {
+  color: inherit;
+}
+
+.site-header {
+  position: absolute;
+  top: 24px;
+  left: 28px;
+}
+
+.site-header a {
+  display: flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 8px;
+  color: oklch(0.7 0.006 45);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.site-header a:hover,
+.site-header a:focus-visible {
+  color: var(--text);
+  outline: 0;
+}
+
+.brand-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--orange);
+}
+
+main {
+  width: min(680px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: clamp(128px, 18vh, 176px) 0 96px;
+}
+
+.eyebrow {
+  margin: 0 0 20px;
+  color: color-mix(in oklch, var(--orange) 65%, var(--muted));
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+h1 {
+  max-width: 14ch;
+  margin: 0;
+  color: oklch(0.94 0.004 45);
+  font-size: clamp(2.25rem, 7vw, 4.5rem);
+  font-weight: 500;
+  letter-spacing: -0.045em;
+  line-height: 0.98;
+}
+
+.lede {
+  max-width: 56ch;
+  margin: 32px 0 0;
+  color: oklch(0.68 0.008 45);
+  font-size: clamp(1rem, 2.5vw, 1.125rem);
+  line-height: 1.7;
+}
+
+.primary-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 32px;
+  color: color-mix(in oklch, var(--orange) 72%, var(--text));
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.primary-link:hover,
+.primary-link:focus-visible {
+  color: var(--orange);
+  outline: 0;
+}
+
+.primary-link span {
+  transition: transform 180ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.primary-link:hover span,
+.primary-link:focus-visible span {
+  transform: translateX(3px);
+}
+
+.guide-sections {
+  display: grid;
+  gap: 64px;
+  margin-top: clamp(88px, 14vw, 128px);
+}
+
+section {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.34fr) minmax(0, 1fr);
+  gap: 32px;
+  border-top: 1px solid var(--line);
+  padding-top: 24px;
+}
+
+h2 {
+  margin: 0;
+  color: oklch(0.72 0.006 45);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1.5;
+  text-transform: uppercase;
+}
+
+.section-body {
+  display: grid;
+  gap: 20px;
+}
+
+p,
+li {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+.section-body p {
+  margin: 0;
+}
+
+ol,
+ul {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+li::marker {
+  color: color-mix(in oklch, var(--orange) 55%, var(--muted));
+}
+
+pre {
+  margin: 4px 0 0;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  padding: 20px;
+  background: oklch(0.07 0.003 45);
+  color: oklch(0.7 0.008 45);
+  font: 13px/1.65 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: pre-wrap;
+}
+
+.guide-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  border-top: 1px solid var(--line);
+  margin-top: 96px;
+  padding-top: 24px;
+}
+
+.guide-nav a {
+  color: var(--muted);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.guide-nav a:hover,
+.guide-nav a:focus-visible,
+.guide-nav a[aria-current="page"] {
+  color: color-mix(in oklch, var(--orange) 65%, var(--text));
+  outline: 0;
+}
+
+@media (max-width: 560px) {
+  .site-header {
+    top: 16px;
+    left: 16px;
+  }
+
+  main {
+    width: min(100% - 32px, 680px);
+  }
+
+  section {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .primary-link span {
+    transition: none;
+  }
+}
+

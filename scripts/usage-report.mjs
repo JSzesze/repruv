@@ -177,19 +177,41 @@ function summarizeFirstParty(rows) {
     browserPageLoads: 0,
     cacheHits: 0,
     cacheMisses: 0,
+    clientSubmits: 0,
     conversionAttempts: 0,
     conversionErrors: 0,
     conversionSuccesses: 0,
+    copies: 0,
+    downloads: 0,
     durationMs: 0,
+    inputEngagements: 0,
     markdownBytes: 0,
+    pageLoadsBySource: {},
     words: 0,
   };
 
   for (const row of rows) {
     const count = Number(row.event_count || 0);
-    if (row.event_name === "browser_page_view") {
-      totals.browserPageLoads += count;
-      continue;
+    switch (row.event_name) {
+      case "browser_page_view":
+        totals.browserPageLoads += count;
+        totals.pageLoadsBySource[row.source || "unknown"] =
+          (totals.pageLoadsBySource[row.source || "unknown"] || 0) + count;
+        continue;
+      case "conversion_submit":
+        totals.clientSubmits += count;
+        continue;
+      case "copy_markdown":
+        totals.copies += count;
+        continue;
+      case "download_markdown":
+        totals.downloads += count;
+        continue;
+      case "input_engaged":
+        totals.inputEngagements += count;
+        continue;
+      default:
+        break;
     }
     if (row.event_name !== "conversion") continue;
     totals.conversionAttempts += count;
@@ -211,7 +233,12 @@ function summarizeFirstParty(rows) {
 }
 
 async function technicalSeo() {
-  const [root, robots, sitemap, image, www] = await Promise.all([
+  const guidePaths = [
+    "/url-to-markdown/",
+    "/webpage-to-markdown/",
+    "/x-to-markdown/",
+  ];
+  const [root, robots, sitemap, image, www, ...guideResponses] = await Promise.all([
     fetch(`${SITE}/`, { headers: { "User-Agent": "repruv-monitor/1.0" } }),
     fetch(`${SITE}/robots.txt`, { headers: { "User-Agent": "repruv-monitor/1.0" } }),
     fetch(`${SITE}/sitemap.xml`, { headers: { "User-Agent": "repruv-monitor/1.0" } }),
@@ -220,11 +247,15 @@ async function technicalSeo() {
       headers: { "User-Agent": "repruv-monitor/1.0" },
       redirect: "manual",
     }),
+    ...guidePaths.map((path) =>
+      fetch(`${SITE}${path}`, { headers: { "User-Agent": "repruv-monitor/1.0" } }),
+    ),
   ]);
-  const [html, robotsText, sitemapText] = await Promise.all([
+  const [html, robotsText, sitemapText, ...guideHtml] = await Promise.all([
     root.text(),
     robots.text(),
     sitemap.text(),
+    ...guideResponses.map((response) => response.text()),
   ]);
 
   return {
@@ -234,9 +265,25 @@ async function technicalSeo() {
     ogImage: image.ok && (image.headers.get("content-type") || "").startsWith("image/"),
     robots: robots.ok && robotsText.includes("Sitemap: https://repruv.com/sitemap.xml"),
     root: root.ok,
-    sitemap: sitemap.ok && sitemapText.includes("<loc>https://repruv.com/</loc>"),
+    sitemap:
+      sitemap.ok &&
+      ["/", ...guidePaths].every((path) =>
+        sitemapText.includes(`<loc>${SITE}${path}</loc>`),
+      ),
+    urlGuide:
+      guideResponses[0]?.ok &&
+      guideHtml[0]?.includes('<h1>URL to Markdown</h1>') &&
+      guideHtml[0]?.includes(`rel="canonical" href="${SITE}${guidePaths[0]}"`),
+    webpageGuide:
+      guideResponses[1]?.ok &&
+      guideHtml[1]?.includes('<h1>Webpage to Markdown</h1>') &&
+      guideHtml[1]?.includes(`rel="canonical" href="${SITE}${guidePaths[1]}"`),
     wwwRedirect:
       www.status === 308 && www.headers.get("location") === "https://repruv.com/",
+    xGuide:
+      guideResponses[2]?.ok &&
+      guideHtml[2]?.includes('<h1>X post to Markdown</h1>') &&
+      guideHtml[2]?.includes(`rel="canonical" href="${SITE}${guidePaths[2]}"`),
   };
 }
 
@@ -305,11 +352,15 @@ console.log(`\n| Metric | Last ${WINDOW_DAYS} days | Prior ${WINDOW_DAYS} days |
 console.log(`| --- | ---: | ---: | ---: |`);
 for (const [label, key] of [
   ["Browser page loads", "browserPageLoads"],
+  ["Input engagements", "inputEngagements"],
+  ["Browser submits", "clientSubmits"],
   ["Conversion attempts", "conversionAttempts"],
   ["Successful conversions", "conversionSuccesses"],
   ["Conversion errors", "conversionErrors"],
   ["Cache hits", "cacheHits"],
   ["Cache misses", "cacheMisses"],
+  ["Copies", "copies"],
+  ["Downloads", "downloads"],
 ]) {
   console.log(
     `| ${label} | ${firstPartyCurrent[key]} | ${firstPartyPrevious[key]} | ${percentageChange(firstPartyCurrent[key], firstPartyPrevious[key])} |`,
@@ -323,7 +374,13 @@ if (firstPartyCurrent.conversionAttempts > 0) {
 
 console.log(`\nCurrent UTC day (${utcToday}, partial):`);
 console.log(`- Browser page loads: ${firstPartyToday.browserPageLoads}`);
+for (const [source, count] of Object.entries(firstPartyToday.pageLoadsBySource)) {
+  console.log(`  - ${source}: ${count}`);
+}
+console.log(`- Input engagements: ${firstPartyToday.inputEngagements}`);
+console.log(`- Browser submits: ${firstPartyToday.clientSubmits}`);
 console.log(`- Conversion attempts: ${firstPartyToday.conversionAttempts}`);
 console.log(`- Successful conversions: ${firstPartyToday.conversionSuccesses}`);
 console.log(`- Conversion errors: ${firstPartyToday.conversionErrors}`);
 console.log(`- Cache hits / misses: ${firstPartyToday.cacheHits} / ${firstPartyToday.cacheMisses}`);
+console.log(`- Copies / downloads: ${firstPartyToday.copies} / ${firstPartyToday.downloads}`);
