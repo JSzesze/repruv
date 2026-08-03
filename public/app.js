@@ -8,6 +8,7 @@ const title = document.querySelector("#title");
 const meta = document.querySelector("#meta");
 const submit = form.querySelector("button[type=submit]");
 const copy = document.querySelector("#copy");
+const share = document.querySelector("#share");
 const download = document.querySelector("#download");
 const clear = document.querySelector("#clear");
 const anew = document.querySelector("#new");
@@ -59,8 +60,9 @@ function animateShellToResult() {
       { transform: "translateY(0)" },
     ],
     {
-      duration: 520,
-      easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+      // Strong ease-out, sub-300ms — Emil Kowalski UI budget
+      duration: 260,
+      easing: "cubic-bezier(0.23, 1, 0.32, 1)",
       fill: "both",
     },
   );
@@ -96,7 +98,7 @@ function revealResult() {
   result.classList.add("is-entering");
   window.setTimeout(() => {
     if (token === revealToken) result.classList.remove("is-entering");
-  }, 560);
+  }, 280);
 }
 
 function resetToInput({ focus = true, clearUrl = true } = {}) {
@@ -190,15 +192,14 @@ document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
   if (!document.body.classList.contains("has-result")) return;
   if (form.classList.contains("is-loading")) return;
-  if (event.target instanceof HTMLElement) {
-    const tag = event.target.tagName;
-    if (tag === "INPUT" || tag === "TEXTAREA") {
-      // Escape in the field clears the session only when results are open.
-    }
-  }
   event.preventDefault();
   handleNew();
 });
+
+function shareLinkFor(sourceUrl) {
+  const target = sourceUrl || current?.sourceUrl || current?.finalUrl || input.value;
+  return `${location.origin}/md?url=${encodeURIComponent(target)}`;
+}
 
 copy.addEventListener("click", async () => {
   if (!current) return;
@@ -217,6 +218,43 @@ copy.addEventListener("click", async () => {
     copy.textContent = "Copy";
     copy.classList.remove("is-success");
   }, 1400);
+});
+
+share?.addEventListener("click", async () => {
+  if (!current) return;
+  const link = shareLinkFor(input.value || current.sourceUrl || current.finalUrl);
+
+  try {
+    if (navigator.share) {
+      await navigator.share({
+        title: current.title || "Markdown",
+        text: current.title || "Converted Markdown",
+        url: link,
+      });
+      track("share_link");
+      return;
+    }
+  } catch (error) {
+    // User cancel is fine; fall through only on unsupported/failed share.
+    if (error && typeof error === "object" && "name" in error && error.name === "AbortError") {
+      return;
+    }
+  }
+
+  try {
+    await navigator.clipboard.writeText(link);
+    share.textContent = "Link copied";
+    share.classList.add("is-success");
+    track("share_link");
+  } catch {
+    share.textContent = "Share failed";
+    share.classList.remove("is-success");
+  }
+
+  window.setTimeout(() => {
+    share.textContent = "Share";
+    share.classList.remove("is-success");
+  }, 1600);
 });
 
 download.addEventListener("click", () => {

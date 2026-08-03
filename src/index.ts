@@ -29,6 +29,7 @@ const BROWSER_EVENTS = new Set([
   "example_click",
   "input_engaged",
   "new_conversion",
+  "share_link",
 ]);
 
 const BROWSER_PAGES = new Set([
@@ -88,8 +89,9 @@ function withCacheMetadata(
 
 function responseForResult(
   result: ExtractionResponse,
-  format: "json" | "markdown",
+  format: "json" | "markdown" | "plain",
   stale = false,
+  options: { interactiveUrl?: string } = {},
 ) {
   const headers = new Headers(API_HEADERS);
   headers.set("Cache-Control", "public, max-age=300, s-maxage=86400");
@@ -97,13 +99,37 @@ function responseForResult(
   headers.set("X-Extraction-Provider", result.provider);
   if (stale) headers.set("Warning", '110 - "Response is stale"');
 
-  if (format === "markdown") {
-    headers.set("Content-Type", "text/markdown; charset=utf-8");
-    headers.set("Content-Disposition", `inline; filename="${safeFilename(result.title)}.md"`);
+  if (format === "markdown" || format === "plain") {
+    // /md share links use text/plain so browsers show a readable page instead of downloading.
+    headers.set(
+      "Content-Type",
+      format === "plain" ? "text/plain; charset=utf-8" : "text/markdown; charset=utf-8",
+    );
+    if (format === "markdown") {
+      headers.set("Content-Disposition", `inline; filename="${safeFilename(result.title)}.md"`);
+    }
+    if (options.interactiveUrl) {
+      headers.set(
+        "Link",
+        `<${options.interactiveUrl}>; rel="alternate"; type="text/html", </api/markdown?url=${encodeURIComponent(result.sourceUrl)}>; rel="alternate"; type="text/markdown"`,
+      );
+    }
     return new Response(result.markdown, { headers });
   }
   headers.set("Content-Type", "application/json; charset=utf-8");
   return new Response(JSON.stringify(result, null, 2), { headers });
+}
+
+function plainTextResponse(message: string, status = 400) {
+  return new Response(`${message}\n`, {
+    status,
+    headers: {
+      "Cache-Control": "no-store",
+      "Content-Type": "text/plain; charset=utf-8",
+      "X-Content-Type-Options": "nosniff",
+      "X-Robots-Tag": "noindex, nofollow",
+    },
+  });
 }
 
 function safeFilename(title: string) {
@@ -176,9 +202,13 @@ async function handleExtraction(
   request: Request,
   env: Env,
   ctx: ExecutionContext,
-  format: "json" | "markdown",
+  format: "json" | "markdown" | "plain",
 ) {
   const startedAt = Date.now();
+  const asPlain = format === "plain";
+  const fail = (message: string, status = 400, code = "BAD_REQUEST") =>
+    asPlain ? plainTextResponse(message, status) : errorResponse(message, status, code);
+
   const rawUrl = await inputUrl(request);
   if (!rawUrl) {
     ctx.waitUntil(
@@ -189,7 +219,11 @@ async function handleExtraction(
         statusCode: 400,
       }),
     );
-    return errorResponse("A url parameter is required.");
+    return fail(
+      asPlain
+        ? "A url parameter is required.\n\nUsage: /md?url=https://example.com"
+        : "A url parameter is required.",
+    );
   }
 
   let normalizedUrl: string;
@@ -204,10 +238,14 @@ async function handleExtraction(
         statusCode: 400,
       }),
     );
-    return errorResponse(error instanceof Error ? error.message : "Invalid URL.");
+    return fail(error instanceof Error ? error.message : "Invalid URL.");
   }
 
   const key = await cacheKeyForUrl(normalizedUrl);
+  const requestUrl = new URL(request.url);
+  const interactiveUrl = `${requestUrl.origin}/?url=${encodeURIComponent(normalizedUrl)}`;
+  const resultOptions = asPlain ? { interactiveUrl } : {};
+
   const edgeResult = await readEdge(request, key);
   if (edgeResult) {
     ctx.waitUntil(
@@ -223,7 +261,7 @@ async function handleExtraction(
         words: edgeResult.stats.words,
       }),
     );
-    return responseForResult(withCacheMetadata(edgeResult, key, "HIT"), format);
+    return responseForResult(withCacheMetadata(edgeResult, key, "HIT"), format, false, resultOptions);
   }
 
   const cached = await readCachedResult(env, key);
@@ -244,7 +282,7 @@ async function handleExtraction(
         }),
       ]).then(() => undefined),
     );
-    return responseForResult(withCacheMetadata(cached.result, key, "HIT"), format);
+    return responseForResult(withCacheMetadata(cached.result, key, "HIT"), format, false, resultOptions);
   }
 
   if (!(await enforceMissRateLimit(request, env))) {
@@ -262,7 +300,12 @@ async function handleExtraction(
           words: cached.result.stats.words,
         }),
       );
-      return responseForResult(withCacheMetadata(cached.result, key, "STALE"), format, true);
+      return responseForResult(
+        withCacheMetadata(cached.result, key, "STALE"),
+        format,
+        true,
+        resultOptions,
+      );
     }
     ctx.waitUntil(
       recordUsage(env, {
@@ -272,11 +315,7 @@ async function handleExtraction(
         statusCode: 429,
       }),
     );
-    return errorResponse(
-      "Too many uncached conversions. Try again in about a minute.",
-      429,
-      "RATE_LIMITED",
-    );
+    return fail("Too many uncached conversions. Try again in about a minute.", 429, "RATE_LIMITED");
   }
 
   try {
@@ -298,7 +337,7 @@ async function handleExtraction(
         }),
       ]).then(() => undefined),
     );
-    return responseForResult(withCacheMetadata(result, key, "MISS"), format);
+    return responseForResult(withCacheMetadata(result, key, "MISS"), format, false, resultOptions);
   } catch (error) {
     if (cached) {
       ctx.waitUntil(
@@ -314,7 +353,12 @@ async function handleExtraction(
           words: cached.result.stats.words,
         }),
       );
-      return responseForResult(withCacheMetadata(cached.result, key, "STALE"), format, true);
+      return responseForResult(
+        withCacheMetadata(cached.result, key, "STALE"),
+        format,
+        true,
+        resultOptions,
+      );
     }
     ctx.waitUntil(
       recordUsage(env, {
@@ -324,7 +368,7 @@ async function handleExtraction(
         statusCode: 502,
       }),
     );
-    return errorResponse(
+    return fail(
       error instanceof Error ? error.message : "Extraction failed.",
       502,
       "EXTRACTION_FAILED",
@@ -399,7 +443,8 @@ export default {
             | "download_markdown"
             | "example_click"
             | "input_engaged"
-            | "new_conversion",
+            | "new_conversion"
+            | "share_link",
           outcome: body.event === "browser_page_view" ? "loaded" : "recorded",
           source: body.page,
           statusCode: 204,
@@ -412,6 +457,13 @@ export default {
     }
     if (url.pathname === "/health") {
       return json({ ok: true, service: "url-to-markdown", version: 1 });
+    }
+    // Shareable plain-text Markdown page: /md?url=https://example.com
+    if (url.pathname === "/md" || url.pathname === "/md/") {
+      if (request.method !== "GET") {
+        return plainTextResponse("Method not allowed. Use GET /md?url=…", 405);
+      }
+      return handleExtraction(request, env, ctx, "plain");
     }
     if (url.pathname === "/api/extract") {
       if (request.method !== "GET" && request.method !== "POST") {

@@ -11,7 +11,8 @@ export interface UsageEvent {
     | "download_markdown"
     | "example_click"
     | "input_engaged"
-    | "new_conversion";
+    | "new_conversion"
+    | "share_link";
   markdownBytes?: number;
   outcome?: string;
   provider?: string;

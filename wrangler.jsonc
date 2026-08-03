@@ -22,7 +22,7 @@
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
-    "run_worker_first": ["/", "/index.html", "/api/*", "/health"]
+    "run_worker_first": ["/", "/index.html", "/api/*", "/health", "/md", "/md/"]
   },
   "browser": {
     "binding": "BROWSER",

@@ -27,7 +27,12 @@
   --font-sans: "Hanken Grotesk", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
-  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Emil Kowalski strong ease-out — responsive, under 300ms UI */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --duration-press: 140ms;
+  --duration-ui: 200ms;
+  --duration-enter: 240ms;
   --radius: 2px;
 
   --space-1: 4px;
@@ -78,6 +83,11 @@ input {
 
 button {
   cursor: pointer;
+  transition: transform var(--duration-press) var(--ease-out);
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 /* ── Header ───────────────────────────────────────── */
@@ -100,13 +110,18 @@ button {
   letter-spacing: 0.2em;
   line-height: 1;
   text-decoration: none;
-  transition: color 160ms var(--ease-out);
+  transition: color var(--duration-ui) var(--ease-out);
 }
 
-.site-header a:hover,
 .site-header a:focus-visible {
   color: var(--text);
   outline: 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .site-header a:hover {
+    color: var(--text);
+  }
 }
 
 .site-header a:focus-visible {
@@ -168,7 +183,7 @@ body.has-result .input-shell {
   overflow: hidden;
   pointer-events: none;
   opacity: 1;
-  transition: opacity 420ms var(--ease-out), filter 420ms var(--ease-out);
+  transition: opacity var(--duration-enter) var(--ease-out);
   -webkit-mask-image: radial-gradient(
     ellipse at center,
     #000 0%,
@@ -181,11 +196,6 @@ body.has-result .input-shell {
     rgba(0, 0, 0, 0.85) 32%,
     transparent 72%
   );
-}
-
-body.is-loading .dot-field {
-  opacity: 1;
-  filter: saturate(1.15);
 }
 
 body.has-result .dot-field {
@@ -207,7 +217,9 @@ form {
 
 .input-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 0 48px;
+  /* Two tracks when clear is display:none; three when results show.
+     A zero-width middle track would park submit in a tiny hit sliver. */
+  grid-template-columns: minmax(0, 1fr) 48px;
   height: 48px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -216,17 +228,12 @@ form {
     0 0 0 1px oklch(0 0 0 / 0.35),
     0 12px 40px oklch(0 0 0 / 0.35);
   transition:
-    border-color 180ms var(--ease-out),
-    box-shadow 180ms var(--ease-out),
-    grid-template-columns 280ms var(--ease-out);
+    border-color var(--duration-ui) var(--ease-out),
+    box-shadow var(--duration-ui) var(--ease-out);
 }
 
 body.has-result .input-row {
   grid-template-columns: minmax(0, 1fr) 44px 48px;
-}
-
-.input-row:hover {
-  border-color: var(--line-strong);
 }
 
 .input-row:focus-within {
@@ -243,6 +250,12 @@ body.is-loading .input-row {
     0 0 0 1px oklch(0 0 0 / 0.35),
     0 0 0 3px var(--heat-soft),
     0 12px 40px oklch(0 0 0 / 0.35);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .input-row:hover {
+    border-color: var(--line-strong);
+  }
 }
 
 input {
@@ -267,24 +280,28 @@ input::placeholder {
   position: relative;
   display: grid;
   place-items: center;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
   border: 0;
   border-left: 1px solid var(--line);
   background: oklch(0.16 0.012 42);
   color: color-mix(in oklch, var(--heat) 70%, var(--text-muted));
   transition:
-    background-color 160ms var(--ease-out),
-    color 160ms var(--ease-out),
-    border-color 160ms var(--ease-out),
-    opacity 200ms var(--ease-out);
+    background-color var(--duration-ui) var(--ease-out),
+    color var(--duration-ui) var(--ease-out),
+    border-color var(--duration-ui) var(--ease-out),
+    opacity var(--duration-ui) var(--ease-out),
+    transform var(--duration-press) var(--ease-out);
 }
 
 .input-row > button[type="submit"] {
+  min-width: 48px;
   border-radius: 0 var(--radius) var(--radius) 0;
 }
 
 .clear-btn {
-  width: 100%;
-  min-width: 0;
+  min-width: 44px;
   color: var(--text-muted);
   background: transparent;
 }
@@ -307,7 +324,7 @@ input::placeholder {
   stroke-linecap: round;
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
-  transition: opacity 120ms var(--ease-out);
+  transition: opacity var(--duration-press) var(--ease-out);
 }
 
 .input-row > button[type="submit"]::after {
@@ -322,14 +339,12 @@ input::placeholder {
   animation: none;
 }
 
-.input-row > button:hover,
 .input-row > button:focus-visible {
   background: color-mix(in oklch, var(--heat) 12%, oklch(0.16 0.012 42));
   color: var(--heat-strong);
   outline: 0;
 }
 
-.clear-btn:hover,
 .clear-btn:focus-visible {
   background: color-mix(in oklch, var(--heat) 8%, transparent);
   color: var(--text);
@@ -337,6 +352,19 @@ input::placeholder {
 
 .input-row > button:active:not(:disabled) {
   background: color-mix(in oklch, var(--heat) 18%, oklch(0.16 0.012 42));
+  transform: scale(0.97);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .input-row > button:hover {
+    background: color-mix(in oklch, var(--heat) 12%, oklch(0.16 0.012 42));
+    color: var(--heat-strong);
+  }
+
+  .clear-btn:hover {
+    background: color-mix(in oklch, var(--heat) 8%, transparent);
+    color: var(--text);
+  }
 }
 
 .input-row > button:disabled {
@@ -350,25 +378,24 @@ form.is-loading .button-icon-submit {
 
 form.is-loading .input-row > button[type="submit"]::after {
   opacity: 1;
-  animation: pulse-dot 700ms var(--ease-out) infinite;
+  animation: pulse-dot 520ms var(--ease-out) infinite;
 }
 
 @keyframes pulse-dot {
   0%,
   100% {
     opacity: 0.4;
-    transform: scale(0.85);
+    transform: scale(0.9);
   }
   50% {
     opacity: 1;
-    transform: scale(1.05);
+    transform: scale(1);
   }
 }
 
 /* ── Tagline + examples ───────────────────────────── */
 
 .tagline {
-  max-height: 3rem;
   margin: var(--space-4) 0 0;
   color: var(--text-muted);
   font-size: 0.8125rem;
@@ -376,10 +403,8 @@ form.is-loading .input-row > button[type="submit"]::after {
   text-align: center;
   letter-spacing: -0.005em;
   transition:
-    opacity 280ms var(--ease-out),
-    transform 420ms var(--ease-out),
-    max-height 420ms var(--ease-out),
-    margin 420ms var(--ease-out);
+    opacity var(--duration-ui) var(--ease-out),
+    transform var(--duration-ui) var(--ease-out);
 }
 
 .tagline a {
@@ -387,14 +412,22 @@ form.is-loading .input-row > button[type="submit"]::after {
   text-decoration-color: var(--line);
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
-  transition: color 160ms var(--ease-out), text-decoration-color 160ms var(--ease-out);
+  transition:
+    color var(--duration-ui) var(--ease-out),
+    text-decoration-color var(--duration-ui) var(--ease-out);
 }
 
-.tagline a:hover,
 .tagline a:focus-visible {
   color: color-mix(in oklch, var(--heat) 55%, var(--text-secondary));
   outline: 0;
   text-decoration-color: currentColor;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tagline a:hover {
+    color: color-mix(in oklch, var(--heat) 55%, var(--text-secondary));
+    text-decoration-color: currentColor;
+  }
 }
 
 .examples {
@@ -402,13 +435,10 @@ form.is-loading .input-row > button[type="submit"]::after {
   flex-wrap: wrap;
   justify-content: center;
   gap: var(--space-2);
-  max-height: 6rem;
   margin-top: var(--space-5);
   transition:
-    opacity 280ms var(--ease-out),
-    transform 420ms var(--ease-out),
-    max-height 420ms var(--ease-out),
-    margin 420ms var(--ease-out);
+    opacity var(--duration-ui) var(--ease-out),
+    transform var(--duration-ui) var(--ease-out);
 }
 
 .example {
@@ -424,12 +454,12 @@ form.is-loading .input-row > button[type="submit"]::after {
   font-size: 0.75rem;
   line-height: 1.2;
   transition:
-    border-color 160ms var(--ease-out),
-    color 160ms var(--ease-out),
-    background-color 160ms var(--ease-out);
+    border-color var(--duration-ui) var(--ease-out),
+    color var(--duration-ui) var(--ease-out),
+    background-color var(--duration-ui) var(--ease-out),
+    transform var(--duration-press) var(--ease-out);
 }
 
-.example:hover,
 .example:focus-visible {
   border-color: var(--line-focus);
   background: var(--heat-soft);
@@ -439,6 +469,15 @@ form.is-loading .input-row > button[type="submit"]::after {
 
 .example:active {
   border-color: color-mix(in oklch, var(--heat) 50%, var(--line));
+  transform: scale(0.97);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .example:hover {
+    border-color: var(--line-focus);
+    background: var(--heat-soft);
+    color: var(--text);
+  }
 }
 
 .example-kind {
@@ -458,7 +497,6 @@ form.is-loading .input-row > button[type="submit"]::after {
 }
 
 .trust {
-  max-height: 2rem;
   margin: var(--space-5) 0 0;
   color: var(--text-faint);
   font-family: var(--font-mono);
@@ -469,10 +507,8 @@ form.is-loading .input-row > button[type="submit"]::after {
   text-align: center;
   text-transform: uppercase;
   transition:
-    opacity 280ms var(--ease-out),
-    transform 420ms var(--ease-out),
-    max-height 420ms var(--ease-out),
-    margin 420ms var(--ease-out);
+    opacity var(--duration-ui) var(--ease-out),
+    transform var(--duration-ui) var(--ease-out);
 }
 
 body.is-loading .examples,
@@ -484,12 +520,7 @@ body.is-loading .trust {
 body.has-result .tagline,
 body.has-result .examples,
 body.has-result .trust {
-  max-height: 0;
-  margin-top: 0;
-  opacity: 0;
-  overflow: hidden;
-  pointer-events: none;
-  transform: translateY(-6px);
+  display: none;
 }
 
 /* ── Error ────────────────────────────────────────── */
@@ -530,17 +561,17 @@ body.has-result main {
 }
 
 .result.is-entering {
-  animation: result-in 520ms var(--ease-out) both;
+  animation: result-in var(--duration-enter) var(--ease-out) both;
 }
 
 @keyframes result-in {
   from {
     opacity: 0;
-    transform: translateY(18px);
+    transform: translateY(8px) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -548,9 +579,14 @@ body.has-result main {
   color: var(--text-muted);
 }
 
-#new:hover,
 #new:focus-visible {
   color: var(--heat-strong);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  #new:hover {
+    color: var(--heat-strong);
+  }
 }
 
 .result-header {
@@ -609,6 +645,9 @@ body.has-result main {
 .actions {
   display: flex;
   flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
   gap: var(--space-2);
 }
 
@@ -622,12 +661,12 @@ body.has-result main {
   font-weight: 500;
   letter-spacing: -0.005em;
   transition:
-    border-color 160ms var(--ease-out),
-    color 160ms var(--ease-out),
-    background-color 160ms var(--ease-out);
+    border-color var(--duration-ui) var(--ease-out),
+    color var(--duration-ui) var(--ease-out),
+    background-color var(--duration-ui) var(--ease-out),
+    transform var(--duration-press) var(--ease-out);
 }
 
-.actions button:hover,
 .actions button:focus-visible {
   border-color: var(--line-focus);
   background: var(--heat-soft);
@@ -637,6 +676,15 @@ body.has-result main {
 
 .actions button:active {
   background: color-mix(in oklch, var(--heat) 18%, var(--bg-elevated));
+  transform: scale(0.97);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .actions button:hover {
+    border-color: var(--line-focus);
+    background: var(--heat-soft);
+    color: var(--heat-strong);
+  }
 }
 
 .actions button.is-success {
@@ -683,11 +731,19 @@ pre:focus-visible {
 
   .input-row {
     height: 46px;
-    grid-template-columns: minmax(0, 1fr) 0 46px;
+    grid-template-columns: minmax(0, 1fr) 46px;
   }
 
   body.has-result .input-row {
     grid-template-columns: minmax(0, 1fr) 42px 46px;
+  }
+
+  .input-row > button[type="submit"] {
+    min-width: 46px;
+  }
+
+  .clear-btn {
+    min-width: 42px;
   }
 
   .result-header {
@@ -715,22 +771,33 @@ pre:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .converter,
+  /* Keep gentle opacity/color; drop movement (Emil a11y: gentler, not zero). */
   .input-shell,
-  .dot-field,
-  .tagline,
-  .examples,
-  .trust,
   .result,
-  .input-row,
-  .input-row > button,
   .example,
   .actions button,
-  .tagline a,
-  .site-header a,
-  .button-icon {
-    transition: none !important;
+  .input-row > button,
+  button {
+    transition:
+      opacity var(--duration-ui) var(--ease-out),
+      color var(--duration-ui) var(--ease-out),
+      background-color var(--duration-ui) var(--ease-out),
+      border-color var(--duration-ui) var(--ease-out) !important;
     animation: none !important;
+    transform: none !important;
+  }
+
+  .result.is-entering {
+    animation: result-fade var(--duration-ui) var(--ease-out) both !important;
+  }
+
+  @keyframes result-fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
 
   form.is-loading .input-row > button[type="submit"]::after {
