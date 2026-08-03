@@ -1,3 +1,13 @@
-.dev.vars
-.wrangler
+# Dependencies and local tooling
 node_modules
+.wrangler
+.dev.vars
+
+# Agent / browser automation (local only)
+.agents
+.playwright-mcp
+
+# OS / editor noise
+.DS_Store
+*.swp
+*~
