@@ -9,6 +9,7 @@ const meta = document.querySelector("#meta");
 const submit = form.querySelector("button[type=submit]");
 const copy = document.querySelector("#copy");
 const download = document.querySelector("#download");
+const examples = document.querySelectorAll(".example");
 
 let current = null;
 
@@ -20,7 +21,14 @@ function setLoading(loading) {
   form.setAttribute("aria-busy", String(loading));
   submit.disabled = loading;
   input.readOnly = loading;
+  examples.forEach((button) => {
+    button.disabled = loading;
+  });
   submit.setAttribute("aria-label", loading ? "Converting URL" : "Convert URL");
+}
+
+function runConversion() {
+  form.requestSubmit();
 }
 
 form.addEventListener("submit", async (event) => {
@@ -58,18 +66,33 @@ form.addEventListener("submit", async (event) => {
   }
 });
 
+examples.forEach((button) => {
+  button.addEventListener("click", () => {
+    const url = button.getAttribute("data-url");
+    if (!url || form.classList.contains("is-loading")) return;
+    track("example_click");
+    input.value = url;
+    runConversion();
+  });
+});
+
 copy.addEventListener("click", async () => {
   if (!current) return;
 
   try {
     await navigator.clipboard.writeText(current.markdown);
     copy.textContent = "Copied";
+    copy.classList.add("is-success");
     track("copy_markdown");
   } catch {
     copy.textContent = "Copy failed";
+    copy.classList.remove("is-success");
   }
 
-  window.setTimeout(() => { copy.textContent = "Copy"; }, 1400);
+  window.setTimeout(() => {
+    copy.textContent = "Copy";
+    copy.classList.remove("is-success");
+  }, 1400);
 });
 
 download.addEventListener("click", () => {

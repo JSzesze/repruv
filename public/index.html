@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#000000" />
+    <meta name="theme-color" content="#1a1512" />
     <meta
       name="description"
       content="Convert public webpages and X posts into clean Markdown. Free, fast, and cached at the edge."
@@ -31,6 +31,12 @@
     <title>Repruv — URL to Markdown Converter</title>
     <link rel="canonical" href="https://repruv.com/" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="/styles.css" />
     <script type="application/ld+json">
       {
@@ -98,7 +104,7 @@
                 autocomplete="url"
                 autocapitalize="none"
                 spellcheck="false"
-                placeholder="Paste a URL"
+                placeholder="Paste a public URL"
                 required
                 autofocus
               />
@@ -112,8 +118,37 @@
 
           <p class="tagline">
             Public <a href="/webpage-to-markdown/">webpages</a> and
-            <a href="/x-to-markdown/">X posts</a> to clean Markdown.
+            <a href="/x-to-markdown/">X posts</a> → clean Markdown.
           </p>
+
+          <div class="examples" role="group" aria-label="Try an example">
+            <button
+              type="button"
+              class="example"
+              data-url="https://en.wikipedia.org/wiki/Markdown"
+            >
+              <span class="example-kind">article</span>
+              <span class="example-label">Wikipedia · Markdown</span>
+            </button>
+            <button
+              type="button"
+              class="example"
+              data-url="https://example.com"
+            >
+              <span class="example-kind">page</span>
+              <span class="example-label">example.com</span>
+            </button>
+            <button
+              type="button"
+              class="example"
+              data-url="https://x.com/jack/status/20"
+            >
+              <span class="example-kind">x</span>
+              <span class="example-label">@jack · first post</span>
+            </button>
+          </div>
+
+          <p class="trust" aria-hidden="true">Free · Anonymous · Public URLs · Shared cache</p>
 
           <section id="error" class="error" hidden aria-live="assertive">
             <p id="error-message"></p>
@@ -123,9 +158,12 @@
 
       <section id="result" class="result" hidden aria-live="polite" aria-busy="false">
         <header class="result-header">
-          <div>
+          <div class="result-heading">
             <h2 id="title"></h2>
-            <p id="meta"></p>
+            <div class="result-meta">
+              <span class="badge">.md</span>
+              <p id="meta"></p>
+            </div>
           </div>
           <div class="actions">
             <button id="copy" type="button">Copy</button>

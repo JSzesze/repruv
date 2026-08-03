@@ -4,12 +4,13 @@
   const context = canvas?.getContext("2d");
   if (!canvas || !container || !context) return;
 
-  const gap = 12;
-  const coreRadius = 1;
-  const opacity = 0.6;
-  const speedMin = 0.4;
-  const speedMax = 1.3;
-  const dotColor = "rgba(217, 85, 18, 0.72)";
+  const gap = 14;
+  const coreRadius = 1.15;
+  const opacity = 0.72;
+  const speedMin = 0.35;
+  const speedMax = 1.15;
+  // Heat orange ~ oklch(0.68 0.19 42) → rgb-ish
+  const dotColor = "rgba(232, 96, 32, 0.78)";
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
   let width = 0;
@@ -43,7 +44,7 @@
     const time = now / 1000;
     for (const dot of dots) {
       const pulse = (Math.sin(time * dot.speed + dot.phase) + 1) / 2;
-      const alpha = 0.12 + pulse * 0.88;
+      const alpha = 0.14 + pulse * 0.86;
 
       context.fillStyle = dotColor;
       context.globalAlpha = alpha * opacity;

@@ -9,6 +9,7 @@ export interface UsageEvent {
     | "conversion_submit"
     | "copy_markdown"
     | "download_markdown"
+    | "example_click"
     | "input_engaged";
   markdownBytes?: number;
   outcome?: string;

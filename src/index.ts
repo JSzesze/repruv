@@ -26,6 +26,7 @@ const BROWSER_EVENTS = new Set([
   "conversion_submit",
   "copy_markdown",
   "download_markdown",
+  "example_click",
   "input_engaged",
 ]);
 
@@ -395,6 +396,7 @@ export default {
             | "conversion_submit"
             | "copy_markdown"
             | "download_markdown"
+            | "example_click"
             | "input_engaged",
           outcome: body.event === "browser_page_view" ? "loaded" : "recorded",
           source: body.page,
