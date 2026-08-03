@@ -6,13 +6,19 @@
 
   const gap = 14;
   const coreRadius = 1.15;
-  const opacity = 0.72;
+  const baseOpacity = 0.72;
   const speedMin = 0.35;
   const speedMax = 1.15;
-  // Heat orange ~ oklch(0.68 0.19 42) → rgb-ish
   const dotColor = "rgba(232, 96, 32, 0.78)";
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
+  const modes = {
+    idle: { speed: 1, opacity: 1, amplitude: 1 },
+    loading: { speed: 2.6, opacity: 1.15, amplitude: 1.08 },
+    result: { speed: 0.7, opacity: 0.55, amplitude: 0.75 },
+  };
+
+  let mode = "idle";
   let width = 0;
   let height = 0;
   let dots = [];
@@ -41,13 +47,16 @@
     context.clearRect(0, 0, width, height);
     context.save();
 
-    const time = now / 1000;
+    const config = modes[mode] || modes.idle;
+    const time = (now / 1000) * config.speed;
+    const opacity = baseOpacity * config.opacity;
+
     for (const dot of dots) {
       const pulse = (Math.sin(time * dot.speed + dot.phase) + 1) / 2;
-      const alpha = 0.14 + pulse * 0.86;
+      const alpha = (0.14 + pulse * 0.86) * config.amplitude;
 
       context.fillStyle = dotColor;
-      context.globalAlpha = alpha * opacity;
+      context.globalAlpha = Math.min(1, alpha * opacity);
       context.beginPath();
       context.arc(dot.x, dot.y, coreRadius, 0, Math.PI * 2);
       context.fill();
@@ -77,6 +86,20 @@
     if (running && visible) frame = requestAnimationFrame(draw);
     else draw(performance.now(), false);
   }
+
+  function setMode(next) {
+    if (!modes[next] || mode === next) return;
+    mode = next;
+    // Kick a frame so loading feels instant even if rAF was idle.
+    if (running && visible) {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(draw);
+    } else {
+      draw(performance.now(), false);
+    }
+  }
+
+  window.repruvDots = { setMode, resize };
 
   const resizeObserver = new ResizeObserver(resize);
   resizeObserver.observe(container);

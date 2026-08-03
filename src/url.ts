@@ -89,10 +89,13 @@ export async function assertPublicUrl(rawUrl: string) {
   const url = new URL(normalized);
   if (isIP(url.hostname)) return normalized;
 
+  // workerd's node:dns may interleave CNAME hostnames with A/AAAA addresses
+  // (e.g. ["dyna.wikimedia.org.", "208.80.154.224"]). Only IP literals count.
   const settled = await Promise.allSettled([resolve4(url.hostname), resolve6(url.hostname)]);
-  const addresses = settled.flatMap((result) =>
-    result.status === "fulfilled" ? result.value : [],
-  );
+  const addresses = settled
+    .flatMap((result) => (result.status === "fulfilled" ? result.value : []))
+    .map((value) => value.replace(/\.$/, ""))
+    .filter((value) => isIP(value) > 0);
   if (addresses.length === 0) {
     throw new Error("The hostname did not resolve to a public address.");
   }

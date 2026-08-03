@@ -206,6 +206,32 @@ async function extractWithBrowser(
   };
 }
 
+function isPolicyError(message: string) {
+  return (
+    /private and reserved/i.test(message) ||
+    /credentials are not supported/i.test(message) ||
+    /only http and https/i.test(message) ||
+    /only standard web ports/i.test(message) ||
+    /did not resolve to a public address/i.test(message) ||
+    /enter a complete url/i.test(message)
+  );
+}
+
+function combineExtractionErrors(directError: unknown, browserError: unknown) {
+  const directMessage = directError instanceof Error ? directError.message : String(directError);
+  const browserMessage = browserError instanceof Error ? browserError.message : String(browserError);
+
+  // Validation/policy failures cannot be fixed by rendering the page.
+  if (isPolicyError(directMessage)) return directMessage;
+
+  if (/browser fallback is unavailable/i.test(browserMessage)) {
+    return directMessage;
+  }
+
+  if (directMessage === browserMessage) return directMessage;
+  return `${directMessage} Browser fallback: ${browserMessage}`;
+}
+
 export async function extractUrl(env: Env, sourceUrl: string, ttlSeconds: number): Promise<StoredExtraction> {
   const startedAt = new Date();
   let extracted: Omit<StoredExtraction, "expiresAt" | "fetchedAt" | "version">;
@@ -216,12 +242,13 @@ export async function extractUrl(env: Env, sourceUrl: string, ttlSeconds: number
     try {
       extracted = await extractDirect(sourceUrl);
     } catch (directError) {
+      const directMessage = directError instanceof Error ? directError.message : String(directError);
+      if (isPolicyError(directMessage)) throw directError;
+
       try {
         extracted = await extractWithBrowser(env, sourceUrl);
       } catch (browserError) {
-        const directMessage = directError instanceof Error ? directError.message : String(directError);
-        const browserMessage = browserError instanceof Error ? browserError.message : String(browserError);
-        throw new Error(`${directMessage} Browser fallback: ${browserMessage}`);
+        throw new Error(combineExtractionErrors(directError, browserError));
       }
     }
   }

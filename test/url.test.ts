@@ -26,6 +26,8 @@ describe("address checks", () => {
     expect(isPrivateAddress("::1")).toBe(true);
     expect(isPrivateAddress("1.1.1.1")).toBe(false);
     expect(isPrivateAddress("2606:4700:4700::1111")).toBe(false);
+    // Non-IP strings (CNAME leftovers) are treated as unsafe if checked raw.
+    expect(isPrivateAddress("dyna.wikimedia.org.")).toBe(true);
   });
 });
 

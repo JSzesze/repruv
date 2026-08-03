@@ -67,6 +67,10 @@ body {
     var(--bg);
 }
 
+body.is-loading {
+  cursor: progress;
+}
+
 button,
 input {
   font: inherit;
@@ -148,6 +152,11 @@ main {
   isolation: isolate;
   width: min(520px, 100%);
   margin: 0 auto;
+  will-change: transform;
+}
+
+body.has-result .input-shell {
+  width: min(640px, 100%);
 }
 
 /* ── Dot field ────────────────────────────────────── */
@@ -158,6 +167,8 @@ main {
   inset: -96px -128px;
   overflow: hidden;
   pointer-events: none;
+  opacity: 1;
+  transition: opacity 420ms var(--ease-out), filter 420ms var(--ease-out);
   -webkit-mask-image: radial-gradient(
     ellipse at center,
     #000 0%,
@@ -170,6 +181,16 @@ main {
     rgba(0, 0, 0, 0.85) 32%,
     transparent 72%
   );
+}
+
+body.is-loading .dot-field {
+  opacity: 1;
+  filter: saturate(1.15);
+}
+
+body.has-result .dot-field {
+  opacity: 0.38;
+  inset: -56px -96px;
 }
 
 .dot-field canvas {
@@ -186,7 +207,7 @@ form {
 
 .input-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 48px;
+  grid-template-columns: minmax(0, 1fr) 0 48px;
   height: 48px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -196,7 +217,12 @@ form {
     0 12px 40px oklch(0 0 0 / 0.35);
   transition:
     border-color 180ms var(--ease-out),
-    box-shadow 180ms var(--ease-out);
+    box-shadow 180ms var(--ease-out),
+    grid-template-columns 280ms var(--ease-out);
+}
+
+body.has-result .input-row {
+  grid-template-columns: minmax(0, 1fr) 44px 48px;
 }
 
 .input-row:hover {
@@ -205,6 +231,14 @@ form {
 
 .input-row:focus-within {
   border-color: var(--line-focus);
+  box-shadow:
+    0 0 0 1px oklch(0 0 0 / 0.35),
+    0 0 0 3px var(--heat-soft),
+    0 12px 40px oklch(0 0 0 / 0.35);
+}
+
+body.is-loading .input-row {
+  border-color: color-mix(in oklch, var(--heat) 34%, var(--line));
   box-shadow:
     0 0 0 1px oklch(0 0 0 / 0.35),
     0 0 0 3px var(--heat-soft),
@@ -235,13 +269,33 @@ input::placeholder {
   place-items: center;
   border: 0;
   border-left: 1px solid var(--line);
-  border-radius: 0 var(--radius) var(--radius) 0;
   background: oklch(0.16 0.012 42);
   color: color-mix(in oklch, var(--heat) 70%, var(--text-muted));
   transition:
     background-color 160ms var(--ease-out),
     color 160ms var(--ease-out),
-    border-color 160ms var(--ease-out);
+    border-color 160ms var(--ease-out),
+    opacity 200ms var(--ease-out);
+}
+
+.input-row > button[type="submit"] {
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+.clear-btn {
+  width: 100%;
+  min-width: 0;
+  color: var(--text-muted);
+  background: transparent;
+}
+
+.clear-btn[hidden] {
+  display: none;
+}
+
+.clear-btn .button-icon {
+  width: 14px;
+  height: 14px;
 }
 
 .button-icon {
@@ -256,7 +310,7 @@ input::placeholder {
   transition: opacity 120ms var(--ease-out);
 }
 
-.input-row > button::after {
+.input-row > button[type="submit"]::after {
   position: absolute;
   width: 6px;
   height: 6px;
@@ -275,6 +329,12 @@ input::placeholder {
   outline: 0;
 }
 
+.clear-btn:hover,
+.clear-btn:focus-visible {
+  background: color-mix(in oklch, var(--heat) 8%, transparent);
+  color: var(--text);
+}
+
 .input-row > button:active:not(:disabled) {
   background: color-mix(in oklch, var(--heat) 18%, oklch(0.16 0.012 42));
 }
@@ -284,36 +344,42 @@ input::placeholder {
   color: var(--text-faint);
 }
 
-form.is-loading .button-icon {
+form.is-loading .button-icon-submit {
   opacity: 0;
 }
 
-form.is-loading .input-row > button::after {
+form.is-loading .input-row > button[type="submit"]::after {
   opacity: 1;
-  animation: pulse-dot 900ms var(--ease-out) infinite;
+  animation: pulse-dot 700ms var(--ease-out) infinite;
 }
 
 @keyframes pulse-dot {
   0%,
   100% {
-    opacity: 0.45;
-    transform: scale(0.9);
+    opacity: 0.4;
+    transform: scale(0.85);
   }
   50% {
     opacity: 1;
-    transform: scale(1);
+    transform: scale(1.05);
   }
 }
 
 /* ── Tagline + examples ───────────────────────────── */
 
 .tagline {
+  max-height: 3rem;
   margin: var(--space-4) 0 0;
   color: var(--text-muted);
   font-size: 0.8125rem;
   line-height: 1.55;
   text-align: center;
   letter-spacing: -0.005em;
+  transition:
+    opacity 280ms var(--ease-out),
+    transform 420ms var(--ease-out),
+    max-height 420ms var(--ease-out),
+    margin 420ms var(--ease-out);
 }
 
 .tagline a {
@@ -336,7 +402,13 @@ form.is-loading .input-row > button::after {
   flex-wrap: wrap;
   justify-content: center;
   gap: var(--space-2);
+  max-height: 6rem;
   margin-top: var(--space-5);
+  transition:
+    opacity 280ms var(--ease-out),
+    transform 420ms var(--ease-out),
+    max-height 420ms var(--ease-out),
+    margin 420ms var(--ease-out);
 }
 
 .example {
@@ -386,6 +458,7 @@ form.is-loading .input-row > button::after {
 }
 
 .trust {
+  max-height: 2rem;
   margin: var(--space-5) 0 0;
   color: var(--text-faint);
   font-family: var(--font-mono);
@@ -395,6 +468,28 @@ form.is-loading .input-row > button::after {
   line-height: 1.5;
   text-align: center;
   text-transform: uppercase;
+  transition:
+    opacity 280ms var(--ease-out),
+    transform 420ms var(--ease-out),
+    max-height 420ms var(--ease-out),
+    margin 420ms var(--ease-out);
+}
+
+body.is-loading .examples,
+body.is-loading .trust {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+body.has-result .tagline,
+body.has-result .examples,
+body.has-result .trust {
+  max-height: 0;
+  margin-top: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transform: translateY(-6px);
 }
 
 /* ── Error ────────────────────────────────────────── */
@@ -420,43 +515,42 @@ form.is-loading .input-row > button::after {
 
 /* ── Result ───────────────────────────────────────── */
 
-body:has(.result:not([hidden])) .converter {
+body.has-result .converter {
   min-height: 0;
   place-items: start center;
   padding: 88px 0 var(--space-5);
 }
 
-body:has(.result:not([hidden])) .input-shell {
-  width: min(640px, 100%);
-}
-
-body:has(.result:not([hidden])) .dot-field {
-  opacity: 0.35;
-}
-
-body:has(.result:not([hidden])) .examples,
-body:has(.result:not([hidden])) .trust {
-  display: none;
-}
-
-body:has(.result:not([hidden])) main {
+body.has-result main {
   width: min(760px, calc(100% - 32px));
 }
 
 .result {
   padding-bottom: var(--space-8);
-  animation: result-in 320ms var(--ease-out) both;
+}
+
+.result.is-entering {
+  animation: result-in 520ms var(--ease-out) both;
 }
 
 @keyframes result-in {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(18px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+#new {
+  color: var(--text-muted);
+}
+
+#new:hover,
+#new:focus-visible {
+  color: var(--heat-strong);
 }
 
 .result-header {
@@ -589,7 +683,11 @@ pre:focus-visible {
 
   .input-row {
     height: 46px;
-    grid-template-columns: minmax(0, 1fr) 46px;
+    grid-template-columns: minmax(0, 1fr) 0 46px;
+  }
+
+  body.has-result .input-row {
+    grid-template-columns: minmax(0, 1fr) 42px 46px;
   }
 
   .result-header {
@@ -617,6 +715,12 @@ pre:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .converter,
+  .input-shell,
+  .dot-field,
+  .tagline,
+  .examples,
+  .trust,
   .result,
   .input-row,
   .input-row > button,
@@ -625,11 +729,11 @@ pre:focus-visible {
   .tagline a,
   .site-header a,
   .button-icon {
-    transition: none;
-    animation: none;
+    transition: none !important;
+    animation: none !important;
   }
 
-  form.is-loading .input-row > button::after {
+  form.is-loading .input-row > button[type="submit"]::after {
     animation: none;
     opacity: 0.72;
   }

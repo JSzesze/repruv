@@ -28,6 +28,7 @@ const BROWSER_EVENTS = new Set([
   "download_markdown",
   "example_click",
   "input_engaged",
+  "new_conversion",
 ]);
 
 const BROWSER_PAGES = new Set([
@@ -397,7 +398,8 @@ export default {
             | "copy_markdown"
             | "download_markdown"
             | "example_click"
-            | "input_engaged",
+            | "input_engaged"
+            | "new_conversion",
           outcome: body.event === "browser_page_view" ? "loaded" : "recorded",
           source: body.page,
           statusCode: 204,
