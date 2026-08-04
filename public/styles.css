@@ -165,13 +165,10 @@ main {
 .input-shell {
   position: relative;
   isolation: isolate;
-  width: min(520px, 100%);
+  /* Stable width idle → result avoids a horizontal layout jump. */
+  width: min(640px, 100%);
   margin: 0 auto;
   will-change: transform;
-}
-
-body.has-result .input-shell {
-  width: min(640px, 100%);
 }
 
 /* ── Dot field ────────────────────────────────────── */
@@ -567,11 +564,11 @@ body.has-result main {
 @keyframes result-in {
   from {
     opacity: 0;
-    transform: translateY(8px) scale(0.98);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
   }
 }
 

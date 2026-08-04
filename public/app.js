@@ -54,18 +54,18 @@ function animateShellToResult() {
   const dy = first.top - last.top;
   if (Math.abs(dy) < 1) return;
 
+  // Invert → play: keep the input visually pinned while layout reflows up.
+  shell.style.transform = `translateY(${dy}px)`;
+  void shell.offsetWidth;
   shell.animate(
-    [
-      { transform: `translateY(${dy}px)` },
-      { transform: "translateY(0)" },
-    ],
+    [{ transform: `translateY(${dy}px)` }, { transform: "translateY(0)" }],
     {
-      // Strong ease-out, sub-300ms — Emil Kowalski UI budget
-      duration: 260,
+      duration: 240,
       easing: "cubic-bezier(0.23, 1, 0.32, 1)",
-      fill: "both",
+      fill: "none",
     },
   );
+  shell.style.transform = "";
 }
 
 function setClearVisible(visible) {
@@ -201,11 +201,38 @@ function shareLinkFor(sourceUrl) {
   return `${location.origin}/md?url=${encodeURIComponent(target)}`;
 }
 
+async function copyText(text) {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return;
+    } catch {
+      // Fall through to execCommand for non-secure or restricted contexts.
+    }
+  }
+
+  const field = document.createElement("textarea");
+  field.value = text;
+  field.setAttribute("readonly", "");
+  field.style.cssText = "position:fixed;inset:0 auto auto 0;width:1px;height:1px;opacity:0;pointer-events:none";
+  document.body.appendChild(field);
+  field.focus();
+  field.select();
+  field.setSelectionRange(0, field.value.length);
+  let copied = false;
+  try {
+    copied = document.execCommand("copy");
+  } finally {
+    field.remove();
+  }
+  if (!copied) throw new Error("Copy failed");
+}
+
 copy.addEventListener("click", async () => {
   if (!current) return;
 
   try {
-    await navigator.clipboard.writeText(current.markdown);
+    await copyText(current.markdown);
     copy.textContent = "Copied";
     copy.classList.add("is-success");
     track("copy_markdown");
@@ -242,7 +269,7 @@ share?.addEventListener("click", async () => {
   }
 
   try {
-    await navigator.clipboard.writeText(link);
+    await copyText(link);
     share.textContent = "Link copied";
     share.classList.add("is-success");
     track("share_link");
