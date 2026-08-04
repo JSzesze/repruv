@@ -31,10 +31,11 @@ curl --get 'https://your-domain.example/api/markdown' \
 ## Extraction order
 
 1. X/Twitter URLs use the FxTwitter adapter and Distill's Draft.js-aware renderer.
-2. Other URLs request native Markdown and then fall back to HTML.
-3. HTML is reduced to readable Markdown with Defuddle.
-4. If direct extraction fails, Browser Run renders the page and runs its Markdown Quick Action.
-5. If refresh fails but an expired cached result exists, the stale result is returned with an HTTP `Warning` header.
+2. Wikipedia article URLs use the MediaWiki parse API for content HTML (not the full site shell).
+3. Other URLs request native Markdown and then fall back to HTML.
+4. HTML is slimmed (chrome removed, main content preferred) and converted with Defuddle.
+5. If direct extraction fails, Browser Run fetches rendered HTML for the same slim→Defuddle path; Markdown Quick Action is a last resort and chrome dumps are rejected.
+6. If refresh fails but an expired cached result exists, the stale result is returned with an HTTP `Warning` header.
 
 ## Cache model
 

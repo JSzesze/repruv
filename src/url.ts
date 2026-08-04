@@ -111,7 +111,8 @@ export async function cacheKeyForUrl(normalizedUrl: string) {
     new TextEncoder().encode(normalizedUrl),
   );
   const hash = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
-  return `results/v1/${hash}.json`;
+  // v2: invalidate pre-slim/browser-chrome cache entries after extraction quality fix.
+  return `results/v2/${hash}.json`;
 }
 
 export function isXStatusUrl(rawUrl: string) {

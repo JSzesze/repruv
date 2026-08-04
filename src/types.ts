@@ -33,7 +33,7 @@ export interface ExtractionResponse extends StoredExtraction {
 
 export interface BrowserRunBinding {
   quickAction(
-    action: "markdown",
+    action: "content" | "markdown",
     input: Record<string, unknown>,
   ): Promise<Response>;
 }
