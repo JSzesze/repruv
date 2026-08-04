@@ -117,8 +117,6 @@ Run the same report locally with `npm run report:usage`. It uses the existing Wr
 
 New and updated public pages can be submitted to IndexNow with `npm run seo:indexnow`. For Google search performance, add `https://repruv.com/` to Google Search Console and submit `https://repruv.com/sitemap.xml`. Import the verified property into Bing Webmaster Tools. Technical SEO is observable immediately; impressions, clicks, and query rankings require webmaster data after discovery.
 
-Launch copy and the account-owner indexing checklist are in [`LAUNCH.md`](./LAUNCH.md).
-
 ## License
 
 [MIT](./LICENSE)
