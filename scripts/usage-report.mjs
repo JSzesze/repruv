@@ -187,6 +187,7 @@ function summarizeFirstParty(rows) {
     inputEngagements: 0,
     markdownBytes: 0,
     pageLoadsBySource: {},
+    validationErrors: 0,
     words: 0,
   };
 
@@ -214,6 +215,10 @@ function summarizeFirstParty(rows) {
         break;
     }
     if (row.event_name !== "conversion") continue;
+    if (row.outcome === "missing_url" || row.outcome === "invalid_url") {
+      totals.validationErrors += count;
+      continue;
+    }
     totals.conversionAttempts += count;
     totals.durationMs += Number(row.duration_ms || 0);
     if (row.outcome === "success") {
@@ -326,10 +331,10 @@ console.log(`| --- | ---: | ---: | ---: |`);
 for (const [label, key] of [
   ["Visits", "visits"],
   ["Homepage requests", "homepageRequests"],
-  ["Conversion attempts", "apiAttempts"],
-  ["Successful conversions", "apiSuccesses"],
-  ["Conversion client errors", "apiClientErrors"],
-  ["Conversion server errors", "apiServerErrors"],
+  ["Conversion endpoint requests", "apiAttempts"],
+  ["Successful endpoint responses", "apiSuccesses"],
+  ["Endpoint client errors", "apiClientErrors"],
+  ["Endpoint server errors", "apiServerErrors"],
 ]) {
   console.log(
     `| ${label} | ${current[key]} | ${previous[key]} | ${percentageChange(current[key], previous[key])} |`,
@@ -342,8 +347,8 @@ for (const [name, passing] of checks) console.log(`- ${passing ? "PASS" : "FAIL"
 if (current.apiAttempts === 0) {
   console.log(`\nObservation: no one used the conversion endpoints during this period.`);
 } else {
-  const successRate = ((current.apiSuccesses / current.apiAttempts) * 100).toFixed(1);
-  console.log(`\nObservation: conversion success rate was ${successRate}%.`);
+  const responseRate = ((current.apiSuccesses / current.apiAttempts) * 100).toFixed(1);
+  console.log(`\nObservation: endpoint 2xx response rate was ${responseRate}%. This includes malformed or automated requests.`);
 }
 
 console.log(`\n## Privacy-safe first-party counters`);
@@ -354,9 +359,10 @@ for (const [label, key] of [
   ["Browser page loads", "browserPageLoads"],
   ["Input engagements", "inputEngagements"],
   ["Browser submits", "clientSubmits"],
-  ["Conversion attempts", "conversionAttempts"],
+  ["Completed conversion attempts", "conversionAttempts"],
   ["Successful conversions", "conversionSuccesses"],
-  ["Conversion errors", "conversionErrors"],
+  ["Completed conversion errors", "conversionErrors"],
+  ["Validation rejections", "validationErrors"],
   ["Cache hits", "cacheHits"],
   ["Cache misses", "cacheMisses"],
   ["Copies", "copies"],
@@ -367,6 +373,10 @@ for (const [label, key] of [
   );
 }
 if (firstPartyCurrent.conversionAttempts > 0) {
+  const successRate = (
+    (firstPartyCurrent.conversionSuccesses / firstPartyCurrent.conversionAttempts) * 100
+  ).toFixed(1);
+  console.log(`\nCompleted conversion success rate: ${successRate}%.`);
   console.log(
     `\nAverage conversion latency: ${Math.round(firstPartyCurrent.durationMs / firstPartyCurrent.conversionAttempts)} ms`,
   );
@@ -379,8 +389,9 @@ for (const [source, count] of Object.entries(firstPartyToday.pageLoadsBySource))
 }
 console.log(`- Input engagements: ${firstPartyToday.inputEngagements}`);
 console.log(`- Browser submits: ${firstPartyToday.clientSubmits}`);
-console.log(`- Conversion attempts: ${firstPartyToday.conversionAttempts}`);
+console.log(`- Completed conversion attempts: ${firstPartyToday.conversionAttempts}`);
 console.log(`- Successful conversions: ${firstPartyToday.conversionSuccesses}`);
-console.log(`- Conversion errors: ${firstPartyToday.conversionErrors}`);
+console.log(`- Completed conversion errors: ${firstPartyToday.conversionErrors}`);
+console.log(`- Validation rejections: ${firstPartyToday.validationErrors}`);
 console.log(`- Cache hits / misses: ${firstPartyToday.cacheHits} / ${firstPartyToday.cacheMisses}`);
 console.log(`- Copies / downloads: ${firstPartyToday.copies} / ${firstPartyToday.downloads}`);
