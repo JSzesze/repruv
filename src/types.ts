@@ -2,6 +2,7 @@ export type ExtractionProvider =
   | "browser-run"
   | "direct-html"
   | "native-markdown"
+  | "firecrawl"
   | "x-fxtwitter";
 
 export interface ExtractionStats {
@@ -21,6 +22,8 @@ export interface StoredExtraction {
   stats: ExtractionStats;
   title: string;
   version: 1;
+  contentStatus?: "article" | "preview";
+  extractorVersion?: string;
 }
 
 export interface ExtractionResponse extends StoredExtraction {
@@ -31,23 +34,18 @@ export interface ExtractionResponse extends StoredExtraction {
   };
 }
 
+export type BrowserInput = { url: string; gotoOptions?: { waitUntil: "networkidle2"; timeout?: number }; rejectRequestPattern?: string[] };
 export interface BrowserRunBinding {
-  quickAction(
-    action: "content" | "markdown",
-    input: Record<string, unknown>,
-  ): Promise<Response>;
+  quickAction(action: "content", input: BrowserInput): Promise<Response>;
+  quickAction(action: "markdown", input: BrowserInput): Promise<Response>;
 }
 
-export interface RateLimitBinding {
-  limit(input: { key: string }): Promise<{ success: boolean }>;
+export function invokeBrowser(browser: BrowserRunBinding, action: "content" | "markdown", input: BrowserInput): Promise<Response> {
+  return action === "content" ? browser.quickAction("content", input) : browser.quickAction("markdown", input);
 }
 
-export interface Env {
-  ANALYTICS?: D1Database;
-  ASSETS: { fetch(request: Request): Promise<Response> };
+export interface ExtractionEnv {
   BROWSER?: BrowserRunBinding;
-  CACHE_TTL_SECONDS?: string;
   ENABLE_BROWSER_FALLBACK?: string;
-  MISS_LIMITER?: RateLimitBinding;
-  RESULTS: R2Bucket;
+  onTiming?: import("./timing").TimingObserver;
 }

@@ -1,8 +1,17 @@
 import { recordUsage } from "./analytics";
-import { readCachedResult, resultAgeSeconds, writeCachedResult } from "./cache";
-import { extractUrl } from "./extract";
-import type { Env, ExtractionResponse, StoredExtraction } from "./types";
+import { readCachedResult, resultAgeSeconds } from "./cache";
+import { relayBrowserRequest } from "./browser-relay";
+import type { ExtractionResponse, StoredExtraction } from "./types";
+import type { Env } from "./worker-types";
 import { cacheKeyForUrl, normalizeUrl } from "./url";
+import { readTextLimited } from "./bounded-body";
+import { describeFailure, ExtractionFailure } from "./failures";
+import { isStoredExtraction } from "./result-contract";
+import { measured, timingRecorder } from "./timing";
+import type { CoordinatedResult } from "./coordinator";
+import { verifyProxySecret } from "./proxy-auth";
+export { ExtractionCoordinator } from "./coordinator";
+export { FallbackBudget } from "./fallback-budget";
 
 const API_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type",
@@ -66,7 +75,7 @@ function json(data: unknown, init: ResponseInit = {}) {
 }
 
 function errorResponse(message: string, status = 400, code = "BAD_REQUEST") {
-  return json({ error: { code, message } }, { status });
+  return json({ error: { code, message } }, { status, headers: { "Cache-Control": "no-store" } });
 }
 
 function ttlFromEnv(env: Env) {
@@ -94,9 +103,11 @@ function responseForResult(
   options: { interactiveUrl?: string } = {},
 ) {
   const headers = new Headers(API_HEADERS);
-  headers.set("Cache-Control", "public, max-age=300, s-maxage=86400");
+  const remaining = Math.max(0, Math.floor((Date.parse(result.expiresAt) - Date.now()) / 1000));
+  headers.set("Cache-Control", stale ? "no-store" : `public, max-age=${Math.min(300, remaining)}, s-maxage=${Math.min(86400, remaining)}`);
   headers.set("X-Cache", result.cache.status);
   headers.set("X-Extraction-Provider", result.provider);
+  headers.set("X-Content-Status", result.contentStatus || "article");
   if (stale) headers.set("Warning", '110 - "Response is stale"');
 
   if (format === "markdown" || format === "plain") {
@@ -148,11 +159,17 @@ async function inputUrl(request: Request) {
   if (request.method === "GET") return requestUrl.searchParams.get("url") || "";
   if (request.method === "POST") {
     const contentType = request.headers.get("content-type") || "";
+    const raw = (await readTextLimited(new Response(request.body, { headers: request.headers }), 8192)).body;
     if (contentType.includes("application/json")) {
-      const body = (await request.json()) as { url?: unknown };
-      return typeof body.url === "string" ? body.url : "";
+      let body: unknown;
+      try { body = JSON.parse(raw); }
+      catch { throw new ExtractionFailure("INVALID_REQUEST", "Request body must be valid JSON.", 400); }
+      if (!body || typeof body !== "object" || !("url" in body) || typeof body.url !== "string") {
+        throw new ExtractionFailure("INVALID_REQUEST", "A string url field is required.", 400);
+      }
+      return body.url;
     }
-    const form = await request.formData();
+    const form = await new Request(request.url, { method: "POST", headers: request.headers, body: raw }).formData();
     const value = form.get("url");
     return typeof value === "string" ? value : "";
   }
@@ -174,8 +191,8 @@ async function readEdge(request: Request, key: string) {
   try {
     const response = await edgeCache().match(edgeCacheRequest(request, key));
     if (!response) return null;
-    const result = (await response.json()) as StoredExtraction;
-    return Date.parse(result.expiresAt) > Date.now() ? result : null;
+    const result: unknown = await response.json();
+    return isStoredExtraction(result) && Date.parse(result.expiresAt) > Date.now() ? result : null;
   } catch {
     return null;
   }
@@ -192,6 +209,10 @@ async function writeEdge(request: Request, key: string, result: StoredExtraction
 }
 
 async function enforceMissRateLimit(request: Request, env: Env) {
+  const serviceToken = request.headers.get("Authorization")?.replace(/^Bearer\s+/i, "") ?? null;
+  // Savit already enforces authenticated per-user import quotas. Its shared
+  // server IP must not consume the anonymous visitor's ten-miss allowance.
+  if (await verifyProxySecret(serviceToken, env.REPRUV_SERVICE_TOKEN)) return true;
   if (!env.MISS_LIMITER) return true;
   const actor = request.headers.get("CF-Connecting-IP") || "unknown";
   const result = await env.MISS_LIMITER.limit({ key: `miss:${actor}` });
@@ -205,11 +226,18 @@ async function handleExtraction(
   format: "json" | "markdown" | "plain",
 ) {
   const startedAt = Date.now();
+  const timing = timingRecorder();
   const asPlain = format === "plain";
   const fail = (message: string, status = 400, code = "BAD_REQUEST") =>
     asPlain ? plainTextResponse(message, status) : errorResponse(message, status, code);
 
-  const rawUrl = await inputUrl(request);
+  let rawUrl: string;
+  try { rawUrl = await inputUrl(request); }
+  catch (error) {
+    const failure = describeFailure(error);
+    return fail(failure.message, failure.status, failure.code);
+  }
+  if (rawUrl.length > 4096) return fail("URL exceeds the 4096 character limit.", 413, "TOO_LARGE");
   if (!rawUrl) {
     ctx.waitUntil(
       recordUsage(env, {
@@ -238,7 +266,7 @@ async function handleExtraction(
         statusCode: 400,
       }),
     );
-    return fail(error instanceof Error ? error.message : "Invalid URL.");
+    return fail(error instanceof Error ? error.message : "Invalid URL.", 400, "INVALID_URL");
   }
 
   const key = await cacheKeyForUrl(normalizedUrl);
@@ -246,7 +274,7 @@ async function handleExtraction(
   const interactiveUrl = `${requestUrl.origin}/?url=${encodeURIComponent(normalizedUrl)}`;
   const resultOptions = asPlain ? { interactiveUrl } : {};
 
-  const edgeResult = await readEdge(request, key);
+  const edgeResult = await measured(timing.observe, "edge_read", () => readEdge(request, key));
   if (edgeResult) {
     ctx.waitUntil(
       recordUsage(env, {
@@ -264,7 +292,7 @@ async function handleExtraction(
     return responseForResult(withCacheMetadata(edgeResult, key, "HIT"), format, false, resultOptions);
   }
 
-  const cached = await readCachedResult(env, key);
+  const cached = await measured(timing.observe, "edge_r2", () => readCachedResult(env, key));
   if (cached && !cached.stale) {
     ctx.waitUntil(
       Promise.all([
@@ -318,14 +346,20 @@ async function handleExtraction(
     return fail("Too many uncached conversions. Try again in about a minute.", 429, "RATE_LIMITED");
   }
 
+  let retryAfter = 0;
   try {
-    const result = await extractUrl(env, normalizedUrl, ttlFromEnv(env));
+    const outcome = await measured<CoordinatedResult>(timing.observe, "coordinator_rpc", async () => await env.EXTRACTION_COORDINATOR.getByName(key).extract(normalizedUrl, ttlFromEnv(env)));
+    if (!outcome.ok) {
+      retryAfter = outcome.retryAfter;
+      throw new ExtractionFailure(outcome.failure.code, outcome.failure.message, outcome.failure.status, outcome.failure.retryable);
+    }
+    const result = outcome.result;
+    console.info(JSON.stringify({ event: "request_timing", phases: timing.phases, wallMs: Date.now() - startedAt, cache: outcome.cache }));
     ctx.waitUntil(
       Promise.all([
-        writeCachedResult(env, key, result),
         writeEdge(request, key, result),
         recordUsage(env, {
-          cacheStatus: "MISS",
+          cacheStatus: outcome.cache,
           durationMs: Date.now() - startedAt,
           eventName: "conversion",
           markdownBytes: result.stats.markdownBytes,
@@ -337,7 +371,7 @@ async function handleExtraction(
         }),
       ]).then(() => undefined),
     );
-    return responseForResult(withCacheMetadata(result, key, "MISS"), format, false, resultOptions);
+    return responseForResult(withCacheMetadata(result, key, outcome.cache), format, false, resultOptions);
   } catch (error) {
     if (cached) {
       ctx.waitUntil(
@@ -368,11 +402,10 @@ async function handleExtraction(
         statusCode: 502,
       }),
     );
-    return fail(
-      error instanceof Error ? error.message : "Extraction failed.",
-      502,
-      "EXTRACTION_FAILED",
-    );
+    const failure = describeFailure(error);
+    const response = fail(failure.message, failure.status, failure.code);
+    if (retryAfter) response.headers.set("Retry-After", String(retryAfter));
+    return response;
   }
 }
 
@@ -455,6 +488,7 @@ export default {
         headers: { "Cache-Control": "no-store" },
       });
     }
+    if (url.pathname === "/api/internal/browser") return relayBrowserRequest(request, env);
     if (url.pathname === "/health") {
       return json({ ok: true, service: "url-to-markdown", version: 1 });
     }

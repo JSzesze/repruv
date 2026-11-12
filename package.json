@@ -9,19 +9,26 @@
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",
     "dev:local": "wrangler dev --config wrangler.local.jsonc",
+    "convex:dev": "convex dev",
+    "convex:deploy": "convex deploy",
+    "sample:convex": "node --env-file=.dev.vars scripts/sample-convex.mjs",
     "report:usage": "node scripts/usage-report.mjs",
     "seo:indexnow": "node scripts/submit-indexnow.mjs",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "test": "vitest run --config vitest.config.ts && vitest run --config vitest.workers.config.ts",
+    "test:workers": "vitest run --config vitest.workers.config.ts",
+    "test:watch": "vitest",
+    "test:live": "REPRUV_LIVE=1 vitest run test/live.test.ts"
   },
   "dependencies": {
+    "convex": "^1.49.0",
     "defuddle": "^0.19.1",
     "linkedom": "^0.18.13"
   },
   "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.8.0",
     "@types/node": "^24.6.1",
     "typescript": "^5.9.2",
     "vitest": "^4.1.10",
-    "wrangler": "^4.112.0"
+    "wrangler": "4.112.0"
   }
 }

@@ -1,4 +1,6 @@
-import type { Env, StoredExtraction } from "./types";
+import type { StoredExtraction } from "./types";
+import type { Env } from "./worker-types";
+import { isStoredExtraction } from "./result-contract";
 
 export interface CachedValue {
   key: string;
@@ -7,12 +9,11 @@ export interface CachedValue {
 }
 
 export async function readCachedResult(env: Env, key: string): Promise<CachedValue | null> {
-  const object = await env.RESULTS.get(key);
-  if (!object) return null;
-
   try {
-    const result = JSON.parse(await object.text()) as StoredExtraction;
-    if (result.version !== 1 || typeof result.markdown !== "string") return null;
+    const object = await env.RESULTS.get(key);
+    if (!object) return null;
+    const result: unknown = JSON.parse(await object.text());
+    if (!isStoredExtraction(result)) return null;
     return {
       key,
       result,

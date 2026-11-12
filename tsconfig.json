@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "allowJs": false,
-    "lib": ["ES2023", "WebWorker"],
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "noEmit": true,
@@ -11,5 +11,5 @@
     "target": "ES2023",
     "types": ["./worker-configuration.d.ts", "node", "vitest/globals"]
   },
-  "include": ["src/**/*.ts", "test/**/*.ts", "worker-configuration.d.ts"]
+  "include": ["src/**/*.ts", "test/**/*.ts", "convex/**/*.ts", "worker-configuration.d.ts"]
 }

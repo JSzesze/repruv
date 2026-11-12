@@ -1,13 +1,17 @@
 import { DOMParser, parseHTML } from "linkedom";
 
-import type { Env, StoredExtraction } from "./types";
+import type { ExtractionEnv, StoredExtraction } from "./types";
+import { invokeBrowser } from "./types";
 import { assertPublicUrl, isXStatusUrl } from "./url";
 import { extractX } from "./x";
+import { readHtmlLimited, readTextLimited } from "./bounded-body";
+import { describeFailure, ExtractionFailure } from "./failures";
+import { measured, type TimingObserver } from "./timing";
 
 const MAX_REDIRECTS = 5;
 const MAX_RESPONSE_BYTES = 5 * 1024 * 1024;
 /** Cap post-slim HTML so linkedom + Defuddle stay within Worker limits. */
-const MAX_SLIM_HTML_BYTES = 900 * 1024;
+const MAX_SLIM_HTML_BYTES = 512 * 1024;
 const REQUEST_TIMEOUT_MS = 15_000;
 const USER_AGENT = "URLToMarkdown/0.1 (+https://github.com/JSzesze)";
 
@@ -20,7 +24,6 @@ const REMOVE_SELECTORS = [
   "svg",
   "nav",
   "footer",
-  "header",
   "aside",
   "form",
   // Wikipedia / Vector chrome
@@ -97,15 +100,10 @@ let markdownDomReady = false;
 
 function ensureMarkdownDom() {
   if (markdownDomReady) return;
-  const scope = globalThis as typeof globalThis & {
-    DOMParser?: unknown;
-    document?: unknown;
-    window?: unknown;
-  };
   const compatibilityDom = parseHTML("<!doctype html><html><body></body></html>");
-  if (!scope.document) scope.document = compatibilityDom.document;
-  if (!scope.window) scope.window = compatibilityDom.window;
-  if (!scope.DOMParser) scope.DOMParser = DOMParser;
+  if (!Reflect.get(globalThis, "document")) Reflect.set(globalThis, "document", compatibilityDom.document);
+  if (!Reflect.get(globalThis, "window")) Reflect.set(globalThis, "window", compatibilityDom.window);
+  if (!Reflect.get(globalThis, "DOMParser")) Reflect.set(globalThis, "DOMParser", DOMParser);
   markdownDomReady = true;
 }
 
@@ -140,20 +138,59 @@ function escapeHtml(value: string) {
  * Drop chrome and prefer a main-content root so Defuddle sees less noise
  * and stays under Worker CPU/memory limits on large pages.
  */
-export function slimHtmlForExtraction(html: string): string {
+function prepareHtmlForExtraction(html: string) {
   const { document } = parseHTML(html);
-
-  for (const selector of REMOVE_SELECTORS) {
-    document.querySelectorAll(selector).forEach((element: { remove(): void }) => element.remove());
-  }
-
+  // Capture metadata before removing the article header or selecting its body.
+  // DEV, for example, keeps the real title in a header above body H1s.
   const title =
+    document.querySelector('meta[property="og:title"]')?.getAttribute("content")?.trim() ||
+    document.querySelector('meta[name="twitter:title"]')?.getAttribute("content")?.trim() ||
+    document.querySelector("article header h1")?.textContent?.trim() ||
     document.querySelector("h1")?.textContent?.trim() ||
     document.querySelector("title")?.textContent?.trim() ||
     "";
+  const author = document.querySelector('meta[name="author"]')?.getAttribute("content")?.trim() || null;
 
-  let root: { outerHTML: string; innerHTML: string; tagName: string; textContent: string | null } | null =
-    null;
+  // Editorial callouts can use <aside> inside the reading content. Preserve
+  // explicitly marked callouts while the normal cleanup still drops sidebars.
+  for (const aside of Array.from(document.querySelectorAll("article aside, main aside, [role='main'] aside"))) {
+    if (!aside.closest("[class*='callout']")) continue;
+    const callout = document.createElement("div");
+    callout.innerHTML = aside.innerHTML;
+    aside.replaceWith(callout);
+  }
+
+  // Accessible accordions already contain their public answers in the HTML.
+  // Flatten only a label and its associated content region inside the article;
+  // unrelated hidden content and navigation panels keep their normal treatment.
+  for (const button of Array.from(document.querySelectorAll("button[aria-controls][aria-expanded]")).reverse()) {
+    const scope = button.closest("article, main, [role='main']");
+    if (!scope || button.closest("nav, footer, form, [role='navigation'], [role='tablist']")) continue;
+    const panel = document.getElementById(button.getAttribute("aria-controls") || "");
+    const labels = panel?.getAttribute("aria-labelledby")?.split(/\s+/) || [];
+    if (!panel || panel.getAttribute("role") !== "region" || !button.id || !labels.includes(button.id)
+      || !scope.contains(panel) || !button.parentElement?.parentElement?.contains(panel)) continue;
+    const heading = document.createElement("h3");
+    heading.textContent = button.textContent?.trim() || "";
+    const answer = document.createElement("div");
+    answer.innerHTML = panel.innerHTML;
+    button.replaceWith(heading);
+    panel.replaceWith(answer);
+  }
+
+  // Query once instead of walking the full source tree for each selector.
+  document.querySelectorAll(REMOVE_SELECTORS.join(","))
+    .forEach((element: { remove(): void }) => element.remove());
+
+  // Defuddle drops semantic header elements. Keep article introductions while
+  // the selectors above still remove the site's navigation/header chrome.
+  for (const header of Array.from(document.querySelectorAll("article header"))) {
+    const intro = document.createElement("div");
+    intro.innerHTML = header.innerHTML;
+    header.replaceWith(intro);
+  }
+
+  let root = null as ReturnType<typeof document.querySelector>;
   for (const selector of CONTENT_SELECTORS) {
     const candidate = document.querySelector(selector);
     if (candidate && (candidate.textContent?.trim().length || 0) > 80) {
@@ -162,11 +199,16 @@ export function slimHtmlForExtraction(html: string): string {
     }
   }
   if (!root) root = document.body;
-  if (!root) return html;
+  if (!root) return { document, title, author };
 
-  const body =
-    root.tagName.toLowerCase() === "body" ? root.innerHTML : root.outerHTML;
-  return `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title></head><body>${body}</body></html>`;
+  // Reuse the parsed document for Defuddle rather than serializing/reparsing it.
+  if (root !== document.body) document.body.replaceChildren(root);
+  document.head.innerHTML = `<meta charset="utf-8"><title>${escapeHtml(title)}</title>${author ? `<meta name="author" content="${escapeHtml(author)}">` : ""}`;
+  return { document, title, author };
+}
+
+export function slimHtmlForExtraction(html: string): string {
+  return prepareHtmlForExtraction(html).document.toString();
 }
 
 export function looksLikeChromeDump(markdown: string): boolean {
@@ -176,13 +218,43 @@ export function looksLikeChromeDump(markdown: string): boolean {
   return hits >= 2;
 }
 
+export function looksLikeChallengePage(content: string): boolean {
+  // Avoid treating an article about bot protection as a challenge page. These
+  // are page titles/headings, not an arbitrary mention within article prose.
+  const heading = /(?:^#{1,3}\s+|<(?:title|h[1-3])[^>]*>\s*)(?:Performing security verification|Just a moment(?:\.{3}|…)?|Verify (?:you are|that you are) human|Checking your browser)(?:\s|<|$)/im;
+  return heading.test(content.slice(0, 100_000)) || /\b(?:id=["']challenge-form["']|class=["'][^"']*cf-challenge|id=["']cf-challenge-running["'])/i.test(content);
+}
+
+function assertReadableContent(content: string) {
+  if (looksLikeChallengePage(content)) {
+    throw new Error("The website returned a security verification page instead of article content.");
+  }
+  if (looksLikeChromeDump(content)) {
+    throw new Error("Readable content could not be isolated from page chrome.");
+  }
+}
+
 export async function htmlToReadableMarkdown(html: string, url: string) {
-  const slim = slimHtmlForExtraction(html);
-  if (byteLength(slim) > MAX_SLIM_HTML_BYTES) {
+  if (looksLikeChallengePage(html)) {
+    throw new Error("The website returned a security verification page instead of article content.");
+  }
+  // Browser-returned HTML has not gone through the streamed source filter.
+  if (typeof HTMLRewriter !== "undefined" && /<(?:script|style|svg|iframe|noscript|template)\b/i.test(html)) {
+    html = (await readHtmlLimited(new Response(html))).body;
+  }
+  if (byteLength(html) > MAX_RESPONSE_BYTES) {
+    throw new ExtractionFailure("TOO_LARGE", "HTML source exceeds the 5 MB size limit.", 413);
+  }
+  let elements = 0;
+  const openingTag = /<[a-z][\w:-]*(?=[\s/>])/gi;
+  while (openingTag.test(html)) {
+    if (++elements > 12000) throw new ExtractionFailure("TOO_LARGE", "HTML exceeds the 12,000 element limit.", 413);
+  }
+  const { document, title: pageTitle, author: pageAuthor } = prepareHtmlForExtraction(html);
+  if (byteLength(document.toString()) > MAX_SLIM_HTML_BYTES) {
     throw new Error("The page content is too large to convert after cleanup.");
   }
 
-  const { document } = parseHTML(slim);
   ensureMarkdownDom();
   const { Defuddle } = await import("defuddle/node");
   const extracted = await Defuddle(document as never, url, {
@@ -191,75 +263,61 @@ export async function htmlToReadableMarkdown(html: string, url: string) {
   });
   let markdown = extracted.content?.trim();
   if (!markdown) throw new Error("Readable content could not be identified.");
-  if (looksLikeChromeDump(markdown)) {
-    throw new Error("Readable content could not be isolated from page chrome.");
-  }
+  assertReadableContent(markdown);
 
-  const title = extracted.title?.trim() || titleFromMarkdown(markdown, url);
-  if (!/^#\s+\S/m.test(markdown)) markdown = `# ${title}\n\n${markdown}`;
+  const title = pageTitle || extracted.title?.trim() || titleFromMarkdown(markdown, url);
+  if (markdown.match(/^#\s+(.+)$/m)?.[1]?.trim() !== title) markdown = `# ${title}\n\n${markdown}`;
   return {
-    author: extracted.author?.trim() || null,
+    author: pageAuthor || extracted.author?.trim() || null,
     markdown: `${markdown.trim()}\n`,
     title,
   };
 }
 
 async function readLimitedText(response: Response) {
-  const declaredLength = Number(response.headers.get("content-length") || 0);
-  if (declaredLength > MAX_RESPONSE_BYTES) {
-    throw new Error("The page is larger than the 5 MB service limit.");
-  }
-  if (!response.body) return { body: "", bytes: 0 };
-
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let bytes = 0;
-  let body = "";
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    bytes += value.byteLength;
-    if (bytes > MAX_RESPONSE_BYTES) {
-      await reader.cancel();
-      throw new Error("The page is larger than the 5 MB service limit.");
-    }
-    body += decoder.decode(value, { stream: true });
-  }
-  return { body: body + decoder.decode(), bytes };
+  return readTextLimited(response, MAX_RESPONSE_BYTES);
 }
 
-async function fetchPublicPage(rawUrl: string): Promise<SafeFetchResult> {
-  let currentUrl = await assertPublicUrl(rawUrl);
+async function fetchPublicPage(rawUrl: string, onTiming?: TimingObserver): Promise<SafeFetchResult> {
+  let currentUrl = await measured(onTiming, "dns", () => assertPublicUrl(rawUrl));
 
   for (let redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount += 1) {
-    const response = await fetch(currentUrl, {
-      headers: {
-        Accept: "text/markdown, text/html;q=0.9, application/xhtml+xml;q=0.8",
-        "Accept-Language": "en-US,en;q=0.8",
-        "User-Agent": USER_AGENT,
-      },
-      redirect: "manual",
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(new DOMException("Source request timed out", "TimeoutError")), REQUEST_TIMEOUT_MS);
+    try {
+      const response = await measured(onTiming, "origin_headers", () => fetch(currentUrl, {
+        headers: {
+          Accept: "text/markdown, text/html;q=0.9, application/xhtml+xml;q=0.8",
+          "Accept-Language": "en-US,en;q=0.8",
+          "User-Agent": USER_AGENT,
+        },
+        redirect: "manual",
+        signal: controller.signal,
+      }));
 
-    if (response.status >= 300 && response.status < 400) {
-      const location = response.headers.get("location");
-      if (!location) throw new Error(`Redirect ${response.status} had no destination.`);
-      if (redirectCount === MAX_REDIRECTS) throw new Error("The URL redirected too many times.");
-      currentUrl = await assertPublicUrl(new URL(location, currentUrl).toString());
-      continue;
-    }
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get("location");
+        if (!location) throw new Error(`Redirect ${response.status} had no destination.`);
+        await response.body?.cancel();
+        if (redirectCount === MAX_REDIRECTS) throw new Error("The URL redirected too many times.");
+        currentUrl = await measured(onTiming, "dns", () => assertPublicUrl(new URL(location, currentUrl).toString()));
+        continue;
+      }
 
-    const { body, bytes } = await readLimitedText(response);
-    if (!response.ok) {
-      throw new Error(`The website returned HTTP ${response.status}.`);
-    }
-    return {
-      body,
-      contentType: response.headers.get("content-type") || "",
-      finalUrl: currentUrl,
-      sourceBytes: bytes,
-    };
+      if (!response.ok) {
+        await response.body?.cancel();
+        throw new ExtractionFailure(response.status === 401 || response.status === 403 ? "BLOCKED" : "UPSTREAM_ERROR", `The website returned HTTP ${response.status}.`, 502, response.status === 429 || response.status >= 500);
+      }
+      const contentType = response.headers.get("content-type") || "";
+      const { body, bytes } = await measured(onTiming, "origin_body", () => /text\/html|application\/xhtml\+xml/i.test(contentType)
+        ? readHtmlLimited(response) : readLimitedText(response));
+      return {
+        body,
+        contentType: response.headers.get("content-type") || "",
+        finalUrl: currentUrl,
+        sourceBytes: bytes,
+      };
+    } finally { clearTimeout(timer); }
   }
   throw new Error("The URL redirected too many times.");
 }
@@ -324,7 +382,7 @@ export function prepareMediaWikiHtml(fragment: string, displayTitle: string): st
   // Drop appendix sections that dominate token count without helping Markdown portability.
   const dropHeading =
     /^(References|External links|Further reading|See also|Notes|Bibliography|Sources|Citations)\b/i;
-  for (const heading of [...document.querySelectorAll("h2, h3")]) {
+  for (const heading of Array.from(document.querySelectorAll("h2, h3"))) {
     const label = (heading.textContent || "").replace(/\[edit\]/gi, "").trim();
     if (!dropHeading.test(label)) continue;
     let node: typeof heading | null = heading;
@@ -367,10 +425,11 @@ async function extractMediaWiki(
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   if (!response.ok) {
+    await response.body?.cancel();
     throw new Error(`Wikipedia API returned HTTP ${response.status}.`);
   }
 
-  const payload = (await response.json()) as {
+  const payload = JSON.parse((await readLimitedText(response)).body) as {
     error?: { info?: string };
     parse?: { title?: string; text?: string };
   };
@@ -410,11 +469,10 @@ function extractionFromMarkdown(
 ): Omit<StoredExtraction, "expiresAt" | "fetchedAt" | "version"> {
   const normalized = markdown.trim();
   if (!normalized) throw new Error("Empty Markdown.");
-  if (looksLikeChromeDump(normalized)) {
-    throw new Error("Extraction returned page chrome instead of article content.");
-  }
+  assertReadableContent(normalized);
   const resolvedTitle = title || titleFromMarkdown(normalized, finalUrl);
-  const withHeading = /^#\s+\S/m.test(normalized) ? normalized : `# ${resolvedTitle}\n\n${normalized}`;
+  const withHeading = normalized.match(/^#\s+(.+)$/m)?.[1]?.trim() === resolvedTitle
+    ? normalized : `# ${resolvedTitle}\n\n${normalized}`;
   return {
     author,
     finalUrl,
@@ -430,7 +488,7 @@ function extractionFromMarkdown(
   };
 }
 
-async function extractDirect(sourceUrl: string): Promise<Omit<StoredExtraction, "expiresAt" | "fetchedAt" | "version">> {
+async function extractDirect(sourceUrl: string, onTiming?: TimingObserver): Promise<Omit<StoredExtraction, "expiresAt" | "fetchedAt" | "version">> {
   const wikiTitle = wikipediaArticleTitle(sourceUrl);
   if (wikiTitle) {
     try {
@@ -440,7 +498,7 @@ async function extractDirect(sourceUrl: string): Promise<Omit<StoredExtraction, 
     }
   }
 
-  const fetched = await fetchPublicPage(sourceUrl);
+  const fetched = await fetchPublicPage(sourceUrl, onTiming);
   const isMarkdown = /(?:text|application)\/(?:x-)?markdown/i.test(fetched.contentType);
 
   if (isMarkdown) {
@@ -457,7 +515,7 @@ async function extractDirect(sourceUrl: string): Promise<Omit<StoredExtraction, 
     throw new Error(`Unsupported content type: ${fetched.contentType || "unknown"}.`);
   }
 
-  const converted = await htmlToReadableMarkdown(fetched.body, fetched.finalUrl);
+  const converted = await measured(onTiming, "parse", () => htmlToReadableMarkdown(fetched.body, fetched.finalUrl));
 
   return {
     author: converted.author,
@@ -475,17 +533,17 @@ async function extractDirect(sourceUrl: string): Promise<Omit<StoredExtraction, 
 }
 
 async function browserQuickAction(
-  env: Env,
+  env: ExtractionEnv,
   action: "content" | "markdown",
   sourceUrl: string,
 ): Promise<{ ok: boolean; result?: string }> {
   if (!env.BROWSER) return { ok: false };
-  const response = await env.BROWSER.quickAction(action, {
-    gotoOptions: { waitUntil: "networkidle2" },
+  const response = await invokeBrowser(env.BROWSER, action, {
+    gotoOptions: { waitUntil: "networkidle2", timeout: 20000 },
     rejectRequestPattern: ["/.*\\.(css|woff2?|ttf|png|jpe?g|gif|webp|svg)(\\?.*)?$/i"],
     url: sourceUrl,
   });
-  const payload = (await response.json()) as { result?: string; success?: boolean };
+  const payload = JSON.parse((await readTextLimited(response, 6 * 1024 * 1024)).body) as { result?: string; success?: boolean };
   const result = typeof payload.result === "string" ? payload.result.trim() : "";
   if (!response.ok || payload.success === false || !result) {
     return { ok: false };
@@ -494,7 +552,7 @@ async function browserQuickAction(
 }
 
 async function extractWithBrowser(
-  env: Env,
+  env: ExtractionEnv,
   sourceUrl: string,
 ): Promise<Omit<StoredExtraction, "expiresAt" | "fetchedAt" | "version">> {
   if (!env.BROWSER || env.ENABLE_BROWSER_FALLBACK === "false") {
@@ -521,18 +579,18 @@ async function extractWithBrowser(
         title: converted.title,
       };
     }
-  } catch {
-    // Fall through to markdown quick action.
+  } catch (error) {
+    // A confirmed challenge will not improve by paying for another conversion
+    // of the same rendered page. Preserve allowance failures as typed failures.
+    const failure = describeFailure(error);
+    if (failure.code === "BLOCKED" || failure.code === "BUDGET_EXHAUSTED") throw error;
+    // Fall through to markdown quick action for conversion-specific failures.
   }
 
   const markdownAction = await browserQuickAction(env, "markdown", sourceUrl);
   if (!markdownAction.ok || !markdownAction.result) {
     throw new Error("Browser Run could not extract Markdown from this page.");
   }
-  if (looksLikeChromeDump(markdownAction.result)) {
-    throw new Error("Browser extraction returned page chrome instead of article content.");
-  }
-
   return extractionFromMarkdown(sourceUrl, sourceUrl, markdownAction.result, "browser-run");
 }
 
@@ -562,7 +620,7 @@ function combineExtractionErrors(directError: unknown, browserError: unknown) {
   return `${directMessage} Browser fallback: ${browserMessage}`;
 }
 
-export async function extractUrl(env: Env, sourceUrl: string, ttlSeconds: number): Promise<StoredExtraction> {
+export async function extractUrl(env: ExtractionEnv, sourceUrl: string, ttlSeconds: number): Promise<StoredExtraction> {
   const startedAt = new Date();
   let extracted: Omit<StoredExtraction, "expiresAt" | "fetchedAt" | "version">;
 
@@ -570,15 +628,17 @@ export async function extractUrl(env: Env, sourceUrl: string, ttlSeconds: number
     extracted = await extractX(sourceUrl);
   } else {
     try {
-      extracted = await extractDirect(sourceUrl);
+      extracted = await extractDirect(sourceUrl, env.onTiming);
     } catch (directError) {
       const directMessage = directError instanceof Error ? directError.message : String(directError);
       if (isPolicyError(directMessage)) throw directError;
+      if (env.ENABLE_BROWSER_FALLBACK === "false" || !env.BROWSER) throw directError;
 
       try {
         extracted = await extractWithBrowser(env, sourceUrl);
       } catch (browserError) {
-        throw new Error(combineExtractionErrors(directError, browserError));
+        const failure = describeFailure(browserError);
+        throw new ExtractionFailure(failure.code, combineExtractionErrors(directError, browserError), failure.status, false);
       }
     }
   }

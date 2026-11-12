@@ -1,0 +1,159 @@
+[
+  {
+    "id": "plain",
+    "title": "A clear article",
+    "body": "<p>A readable opening explains the subject and gives readers useful context before introducing its main point.</p>",
+    "contains": [
+      "A readable opening"
+    ]
+  },
+  {
+    "id": "short",
+    "title": "A short update",
+    "body": "<p>The launch is tomorrow.</p>",
+    "contains": [
+      "The launch is tomorrow."
+    ]
+  },
+  {
+    "id": "headings",
+    "title": "A practical guide",
+    "body": "<p>This guide introduces two useful steps and explains how readers can work through them at their own pace.</p><h2>First step</h2><p>Begin by writing down the outcome.</p><h2>Next step</h2><p>Choose one action to try today.</p>",
+    "contains": [
+      "## First step",
+      "## Next step"
+    ]
+  },
+  {
+    "id": "code",
+    "title": "A code example",
+    "body": "<p>The following JavaScript example computes a value and prints the result so the reader can inspect it.</p><pre><code class=\"language-js\">const answer = 42;\nconsole.log(answer);</code></pre>",
+    "contains": [
+      "```",
+      "const answer = 42;",
+      "console.log(answer);"
+    ]
+  },
+  {
+    "id": "numeric-code",
+    "title": "Numeric output",
+    "body": "<p>This program prints numeric output. Keep the example exactly so readers can compare their result.</p><pre><code>42\n\n100</code></pre>",
+    "contains": [
+      "```",
+      "42",
+      "100"
+    ]
+  },
+  {
+    "id": "table",
+    "title": "A comparison table",
+    "body": "<p>The table compares two options using a small set of concrete values that readers can inspect.</p><table><thead><tr><th>Item</th><th>Value</th></tr></thead><tbody><tr><td>First</td><td>12</td></tr><tr><td>Second</td><td>24</td></tr></tbody></table>",
+    "contains": [
+      "|",
+      "Item",
+      "First",
+      "Second"
+    ]
+  },
+  {
+    "id": "images",
+    "title": "An illustrated article",
+    "body": "<p>This article includes a diagram that explains its main idea and should remain with the surrounding prose.</p><img src=\"https://example.com/diagram.png\" alt=\"Useful diagram\" width=\"1200\" height=\"700\"><p>The diagram connects the ideas described in the opening paragraph.</p>",
+    "contains": [
+      "https://example.com/diagram.png"
+    ]
+  },
+  {
+    "id": "links",
+    "title": "Linked references",
+    "body": "<p>Readers can follow <a href=\"/docs\">the documentation</a> for a longer explanation and an example of the approach.</p>",
+    "contains": [
+      "[the documentation](https://example.com/docs)"
+    ]
+  },
+  {
+    "id": "unicode",
+    "title": "Écrire & lire",
+    "body": "<p>Un article peut conserver les accents, les idées et les caractères de plusieurs langues sans perdre sa lisibilité.</p><p>日本語の文章と العربية تبقى واضحة.</p>",
+    "contains": [
+      "Écrire & lire",
+      "日本語",
+      "العربية"
+    ]
+  },
+  {
+    "id": "lists",
+    "title": "A useful checklist",
+    "body": "<p>Use this checklist to prepare a small release and verify that the important tasks are complete before publishing.</p><ul><li>Review the content</li><li>Check the links</li></ul><ol><li>Save the result</li><li>Publish the revision</li></ol>",
+    "contains": [
+      "Review the content",
+      "Check the links",
+      "Save the result",
+      "Publish the revision"
+    ]
+  },
+  {
+    "id": "preview",
+    "title": "A newsletter preview",
+    "body": "<p>This introduction explains the topic and gives readers enough context to decide whether they want the full article.</p><p>This post is for paid subscribers. Subscribe to continue reading.</p>",
+    "contains": [
+      "This introduction"
+    ],
+    "contentStatus": "preview"
+  },
+  {
+    "id": "technical-access-denied",
+    "title": "Understanding HTTP errors",
+    "body": "<p>This article explains common HTTP errors and gives application developers a practical way to distinguish them.</p><h2>Access denied</h2><p>An HTTP 403 response can indicate that a signed-in user lacks the required role for a resource.</p>",
+    "contains": [
+      "Access denied",
+      "HTTP 403"
+    ]
+  },
+  {
+    "id": "blockquote",
+    "title": "A quoted example",
+    "body": "<p>The following quotation is part of the article and illustrates the idea discussed in the introduction.</p><blockquote><p>Small improvements make the next step easier.</p></blockquote><p>Keep that quotation together with the author's explanation.</p>",
+    "contains": [
+      "> Small improvements",
+      "author's explanation"
+    ]
+  },
+  {
+    "id": "body-h1",
+    "title": "The real article title",
+    "body": "<p>The introduction establishes the actual article before an independent body heading compares another subject in detail.</p><h1>A separate body heading</h1><p>This body heading is meaningful content and must not replace the metadata title.</p>",
+    "contains": [
+      "# The real article title",
+      "A separate body heading"
+    ]
+  },
+  {
+    "id": "site-chrome",
+    "title": "Content inside a page",
+    "body": "<p>The article should retain this paragraph and its supporting explanation while unrelated page navigation is removed.</p><p>A second paragraph completes the example and provides enough material for a useful extracted document.</p>",
+    "contains": [
+      "supporting explanation",
+      "A second paragraph"
+    ]
+  },
+  {
+    "id": "editorial-callout",
+    "title": "A guide with a callout",
+    "body": "<p>This guide introduces its main subject and gives readers context before a short callout summarizes the central idea.</p><div class=\"rich-content-callout\"><aside class=\"stack\"><h3>The central idea</h3><p>This editorial summary belongs with the article.</p></aside></div><p>The explanation continues with examples that develop the main subject in detail.</p>",
+    "contains": [
+      "The central idea",
+      "This editorial summary belongs with the article."
+    ]
+  },
+  {
+    "id": "collapsed-faq",
+    "title": "A guide with questions",
+    "body": "<p>This guide explains the subject and includes public answers in a collapsed accordion for readers to explore.</p><h2>Questions</h2><div class=\"accordion-item\"><button id=\"question-one\" aria-controls=\"answer-one\" aria-expanded=\"false\">Why does this matter?</button><div id=\"answer-one\" role=\"region\" aria-labelledby=\"question-one\" hidden><p>The answer explains why this subject matters and gives the reader a useful starting point.</p><p>See <a href=\"/reference\">the reference</a> for more detail.</p></div></div><div hidden>Unrelated hidden promotion</div>",
+    "contains": [
+      "Why does this matter?",
+      "The answer explains why this subject matters",
+      "[the reference](https://example.com/reference)"
+    ]
+  }
+]

@@ -6,6 +6,7 @@
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
   "preview_urls": true,
+  "limits": { "cpu_ms": 5000 },
   "routes": [
     {
       "pattern": "repruv.com/*",
@@ -17,8 +18,16 @@
     }
   ],
   "observability": {
-    "enabled": true
+    "enabled": true,
+    "traces": { "enabled": true, "head_sampling_rate": 0.01 }
   },
+  "durable_objects": {
+    "bindings": [
+      { "name": "EXTRACTION_COORDINATOR", "class_name": "ExtractionCoordinator" },
+      { "name": "FALLBACK_BUDGET", "class_name": "FallbackBudget" }
+    ]
+  },
+  "migrations": [{ "tag": "v1-coordination", "new_sqlite_classes": ["ExtractionCoordinator", "FallbackBudget"] }],
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
@@ -53,6 +62,11 @@
   ],
   "vars": {
     "CACHE_TTL_SECONDS": "604800",
-    "ENABLE_BROWSER_FALLBACK": "true"
+    "ENABLE_BROWSER_FALLBACK": "true",
+    "BROWSER_DAILY_LIMIT": "20",
+    "BROWSER_MONTHLY_LIMIT": "300",
+    "FIRECRAWL_DAILY_LIMIT": "0",
+    "FIRECRAWL_MONTHLY_LIMIT": "0",
+    "FALLBACK_CONCURRENCY": "2"
   }
 }

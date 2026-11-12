@@ -1,0 +1,23 @@
+{
+  "name": "repruv-runtime-tests",
+  "main": "../../src/index.ts",
+  "compatibility_date": "2026-07-18",
+  "compatibility_flags": ["nodejs_compat"],
+  "durable_objects": {
+    "bindings": [
+      { "name": "EXTRACTION_COORDINATOR", "class_name": "ExtractionCoordinator" },
+      { "name": "FALLBACK_BUDGET", "class_name": "FallbackBudget" }
+    ]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ExtractionCoordinator", "FallbackBudget"] }],
+  "r2_buckets": [{ "binding": "RESULTS", "bucket_name": "test-results" }],
+  "vars": {
+    "CACHE_TTL_SECONDS": "3600",
+    "ENABLE_BROWSER_FALLBACK": "false",
+    "CONVEX_SITE_URL": "",
+    "REPRUV_PROXY_SECRET": "",
+    "BROWSER_DAILY_LIMIT": "2",
+    "BROWSER_MONTHLY_LIMIT": "3",
+    "FALLBACK_CONCURRENCY": "1"
+  }
+}

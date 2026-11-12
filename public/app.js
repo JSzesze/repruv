@@ -150,7 +150,7 @@ form.addEventListener("submit", async (event) => {
 
     const words = Number(payload.stats?.words || 0).toLocaleString();
     const cache = String(payload.cache?.status || "fresh").toLowerCase();
-    meta.textContent = `${words} words · ${cache} cache`;
+    meta.textContent = `${words} words · ${cache} cache${payload.contentStatus === "preview" ? " · Preview only" : ""}`;
 
     history.replaceState(null, "", `?url=${encodeURIComponent(input.value)}`);
     revealResult();

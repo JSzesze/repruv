@@ -4,6 +4,13 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-07-18",
   "compatibility_flags": ["nodejs_compat"],
+  "durable_objects": {
+    "bindings": [
+      { "name": "EXTRACTION_COORDINATOR", "class_name": "ExtractionCoordinator" },
+      { "name": "FALLBACK_BUDGET", "class_name": "FallbackBudget" }
+    ]
+  },
+  "migrations": [{ "tag": "v1-coordination", "new_sqlite_classes": ["ExtractionCoordinator", "FallbackBudget"] }],
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",

@@ -1,4 +1,4 @@
-import type { Env } from "./types";
+import type { Env } from "./worker-types";
 
 export interface UsageEvent {
   cacheStatus?: "" | "HIT" | "MISS" | "STALE";
