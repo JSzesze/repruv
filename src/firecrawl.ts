@@ -24,6 +24,7 @@ export async function extractFirecrawl(url: string, apiKey: string, ttl: number)
   const now = Date.now();
   return {
     author: converted?.author || data.metadata?.author || null,
+    ...(converted?.coverImage ? { coverImage: converted.coverImage } : {}),
     expiresAt: new Date(now + ttl * 1000).toISOString(), fetchedAt: new Date(now).toISOString(),
     finalUrl: url, sourceUrl: url, title: converted?.title || data.metadata?.title || new URL(url).hostname,
     markdown, provider: "firecrawl", version: 1,

@@ -26,7 +26,7 @@ export function normalizeExtraction(result: StoredExtraction): StoredExtraction 
     ...result,
     markdown: `${markdown}\n`,
     contentStatus: preview ? "preview" : "article",
-    extractorVersion: "2026-11-11.3",
+    extractorVersion: "2026-11-12.1",
     stats: {
       ...result.stats,
       markdownBytes: new TextEncoder().encode(`${markdown}\n`).byteLength,

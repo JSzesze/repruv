@@ -135,3 +135,30 @@ describe("Wikipedia URL routing", () => {
     expect(prepared).not.toContain("External links");
   });
 });
+
+describe("article images", () => {
+  const body = '<p>A useful opening paragraph gives the reader enough context to keep this article selected.</p><p>The article continues with a substantial explanation and useful details about the subject.</p>';
+  it("preserves a lead image stored above the article body, without adding author avatars", async () => {
+    const result = await htmlToReadableMarkdown(`<html><head><title>Article with artwork</title>
+      <meta property="og:image" content="/photos/lead.jpg?quality=90&amp;w=1200">
+      </head><body><header class="site-header"><img src="https://example.com/logo.png"></header>
+      <article><header><h1>Article with artwork</h1><aside><img src="/author-avatar.jpg"></aside>
+      <div style="position:relative"><img style="position:absolute" src="/photos/lead.jpg?w=2400"></div></header>
+      <div class="article-body">${body}</div></article></body></html>`, "https://example.com/story");
+    expect(result.coverImage).toBe("https://example.com/photos/lead.jpg?quality=90&w=1200");
+    expect(result.markdown).toContain("A useful opening paragraph");
+    expect(result.markdown).not.toContain("author-avatar");
+    expect(result.markdown).not.toContain("logo.png");
+  });
+  it("retains inline article figures and their captions", async () => {
+    const result = await htmlToReadableMarkdown(`<html><head><title>An illustrated explanation</title></head><body><article>
+      <h1>An illustrated explanation</h1>${body}<figure><img width="1000" height="600" src="https://images.example.com/diagram.jpg" alt="Architecture diagram">
+      <figcaption>The diagram explains the connections.</figcaption></figure>${body}</article></body></html>`, "https://example.com/story");
+    expect(result.markdown).toContain("![Architecture diagram](https://images.example.com/diagram.jpg)");
+    expect(result.markdown).toContain("The diagram explains the connections.");
+  });
+  it.each(["data:image/png;base64,AAAA", "javascript:alert(1)", "http://127.0.0.1/private", "https://user:secret@example.com/photo.jpg"])("rejects unsafe cover metadata: %s", async cover => {
+    const result = await htmlToReadableMarkdown(`<html><head><title>A useful article</title><meta property="og:image" content="${cover}"></head><body><article><h1>A useful article</h1>${body}</article></body></html>`, "https://example.com/story");
+    expect(result.coverImage).toBeUndefined();
+  });
+});

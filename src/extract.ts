@@ -2,7 +2,7 @@ import { DOMParser, parseHTML } from "linkedom";
 
 import type { ExtractionEnv, StoredExtraction } from "./types";
 import { invokeBrowser } from "./types";
-import { assertPublicUrl, isXStatusUrl } from "./url";
+import { assertPublicUrl, isXStatusUrl, normalizeUrl } from "./url";
 import { extractX } from "./x";
 import { readHtmlLimited, readTextLimited } from "./bounded-body";
 import { describeFailure, ExtractionFailure } from "./failures";
@@ -138,7 +138,13 @@ function escapeHtml(value: string) {
  * Drop chrome and prefer a main-content root so Defuddle sees less noise
  * and stays under Worker CPU/memory limits on large pages.
  */
-function prepareHtmlForExtraction(html: string) {
+function publicImageUrl(value: string | null | undefined, baseUrl?: string): string | undefined {
+  if (!value?.trim() || value.length > 4096) return undefined;
+  try { return normalizeUrl(new URL(value.trim(), baseUrl).toString()); }
+  catch { return undefined; }
+}
+
+function prepareHtmlForExtraction(html: string, baseUrl?: string) {
   const { document } = parseHTML(html);
   // Capture metadata before removing the article header or selecting its body.
   // DEV, for example, keeps the real title in a header above body H1s.
@@ -149,6 +155,11 @@ function prepareHtmlForExtraction(html: string) {
     document.querySelector("h1")?.textContent?.trim() ||
     document.querySelector("title")?.textContent?.trim() ||
     "";
+  // Keep artwork metadata even when the article body scorer drops a header hero.
+  const coverImage = [
+    'meta[property="og:image:secure_url"]', 'meta[property="og:image"]',
+    'meta[name="twitter:image"]', 'meta[property="twitter:image"]',
+  ].map(selector => publicImageUrl(document.querySelector(selector)?.getAttribute("content"), baseUrl)).find(Boolean);
   const author = document.querySelector('meta[name="author"]')?.getAttribute("content")?.trim() || null;
 
   // Editorial callouts can use <aside> inside the reading content. Preserve
@@ -199,12 +210,12 @@ function prepareHtmlForExtraction(html: string) {
     }
   }
   if (!root) root = document.body;
-  if (!root) return { document, title, author };
+  if (!root) return { document, title, author, coverImage };
 
   // Reuse the parsed document for Defuddle rather than serializing/reparsing it.
   if (root !== document.body) document.body.replaceChildren(root);
-  document.head.innerHTML = `<meta charset="utf-8"><title>${escapeHtml(title)}</title>${author ? `<meta name="author" content="${escapeHtml(author)}">` : ""}`;
-  return { document, title, author };
+  document.head.innerHTML = `<meta charset="utf-8"><title>${escapeHtml(title)}</title>${author ? `<meta name="author" content="${escapeHtml(author)}">` : ""}${coverImage ? `<meta property="og:image" content="${escapeHtml(coverImage)}">` : ""}`;
+  return { document, title, author, coverImage };
 }
 
 export function slimHtmlForExtraction(html: string): string {
@@ -250,7 +261,7 @@ export async function htmlToReadableMarkdown(html: string, url: string) {
   while (openingTag.test(html)) {
     if (++elements > 12000) throw new ExtractionFailure("TOO_LARGE", "HTML exceeds the 12,000 element limit.", 413);
   }
-  const { document, title: pageTitle, author: pageAuthor } = prepareHtmlForExtraction(html);
+  const { document, title: pageTitle, author: pageAuthor, coverImage } = prepareHtmlForExtraction(html, url);
   if (byteLength(document.toString()) > MAX_SLIM_HTML_BYTES) {
     throw new Error("The page content is too large to convert after cleanup.");
   }
@@ -269,6 +280,7 @@ export async function htmlToReadableMarkdown(html: string, url: string) {
   if (markdown.match(/^#\s+(.+)$/m)?.[1]?.trim() !== title) markdown = `# ${title}\n\n${markdown}`;
   return {
     author: pageAuthor || extracted.author?.trim() || null,
+    coverImage: coverImage || publicImageUrl(extracted.image, url),
     markdown: `${markdown.trim()}\n`,
     title,
   };
@@ -445,6 +457,7 @@ async function extractMediaWiki(
 
   return {
     author: null,
+    ...(converted.coverImage ? { coverImage: converted.coverImage } : {}),
     finalUrl: finalUrl.toString(),
     markdown: converted.markdown,
     provider: "direct-html",
@@ -519,6 +532,7 @@ async function extractDirect(sourceUrl: string, onTiming?: TimingObserver): Prom
 
   return {
     author: converted.author,
+    ...(converted.coverImage ? { coverImage: converted.coverImage } : {}),
     finalUrl: fetched.finalUrl,
     markdown: converted.markdown,
     provider: "direct-html",
@@ -567,6 +581,7 @@ async function extractWithBrowser(
       const converted = await htmlToReadableMarkdown(content.result, sourceUrl);
       return {
         author: converted.author,
+        ...(converted.coverImage ? { coverImage: converted.coverImage } : {}),
         finalUrl: sourceUrl,
         markdown: converted.markdown,
         provider: "browser-run",

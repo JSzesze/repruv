@@ -22,6 +22,7 @@ export interface StoredExtraction {
   stats: ExtractionStats;
   title: string;
   version: 1;
+  coverImage?: string;
   contentStatus?: "article" | "preview";
   extractorVersion?: string;
 }

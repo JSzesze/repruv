@@ -111,8 +111,8 @@ export async function cacheKeyForUrl(normalizedUrl: string) {
     new TextEncoder().encode(normalizedUrl),
   );
   const hash = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
-  // Invalidate results missing article callouts and collapsed public answers.
-  return `results/v4/${hash}.json`;
+  // Invalidate older results that discarded article artwork metadata.
+  return `results/v5/${hash}.json`;
 }
 
 export function isXStatusUrl(rawUrl: string) {

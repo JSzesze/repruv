@@ -9,7 +9,7 @@ import type { StoredExtraction } from "../../src/types";
 import { htmlToReadableMarkdown } from "../../src/extract";
 
 afterEach(() => vi.restoreAllMocks());
-const html = '<!doctype html><html><head><title>A runtime article</title></head><body><article><h1>A runtime article</h1><p>A useful article with enough context for extraction, including a stable reading body for the fixture.</p></article></body></html>';
+const html = '<!doctype html><html><head><title>A runtime article</title><meta property="og:image" content="https://images.example.com/lead.jpg"></head><body><article><h1>A runtime article</h1><p>A useful article with enough context for extraction, including a stable reading body for the fixture.</p></article></body></html>';
 
 describe("Cloudflare extraction coordination", () => {
   it("rechecks R2 when a result arrives between the outer miss and coordination", async () => {
@@ -38,7 +38,7 @@ describe("Cloudflare extraction coordination", () => {
     expect(get).toHaveBeenCalledTimes(2); // The warmed edge cache avoids another R2 read.
   });
   it("extracts HTML in the Workers runtime", async () => {
-    expect(await htmlToReadableMarkdown(html, "https://example.com/article")).toMatchObject({ title: "A runtime article" });
+    expect(await htmlToReadableMarkdown(html, "https://example.com/article")).toMatchObject({ title: "A runtime article", coverImage: "https://images.example.com/lead.jpg" });
   });
   it("keeps editorial callouts and collapsed public answers through streaming cleanup", async () => {
     const source = html.replace("</article>", '<div class="rich-content-callout"><aside><h3>A useful summary</h3><p>The summary explains the article and belongs to its reading content.</p></aside></div><div><button id="question" aria-controls="answer" aria-expanded="false">Why does this matter?</button><div id="answer" role="region" aria-labelledby="question" hidden><p>The public answer provides additional context that should remain available in the extracted article.</p></div></div><div hidden>Unrelated hidden promotion</div></article>');
@@ -62,7 +62,7 @@ describe("Cloudflare extraction coordination", () => {
     const second = stub.extract(url, 3600);
     release();
     const results = await Promise.all([first, second]);
-    expect(results[0], JSON.stringify(results[0])).toMatchObject({ ok: true });
+    expect(results[0], JSON.stringify(results[0])).toMatchObject({ ok: true, result: { coverImage: "https://images.example.com/lead.jpg" } });
     expect(results.every(result => result.ok)).toBe(true);
     if (results[0].ok && results[1].ok) expect(results[0].result).toEqual(results[1].result);
     expect(fetchMock).toHaveBeenCalledTimes(1);
